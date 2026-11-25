@@ -106,7 +106,7 @@ export const ControlesTitular: React.FC = () => {
               setFormResultado({
                 control_id: '',
                 tipo_control: 'Presión arterial',
-                fecha_medicion: new Date().toISOString().slice(0, 16),
+                fecha_medicion: getLocalDatetimeString(),
                 valor_sistolica: 120,
                 valor_diastolica: 80,
                 valor_numerico: 90,
@@ -171,7 +171,7 @@ export const ControlesTitular: React.FC = () => {
                     setFormResultado({
                       control_id: c.control_id,
                       tipo_control: c.tipo_control,
-                      fecha_medicion: new Date().toISOString().slice(0, 16),
+                      fecha_medicion: getLocalDatetimeString(),
                       valor_sistolica: 118,
                       valor_diastolica: 78,
                       valor_numerico: c.tipo_control === 'Glucosa' ? 90 : c.tipo_control === 'Colesterol LDL' ? 95 : 23.5,
@@ -262,11 +262,54 @@ export const ControlesTitular: React.FC = () => {
               Puedes asociarla a un control programado o guardarla libremente sin meta.
             </p>
 
-            <form onSubmit={handleCrearResultado} className="space-y-3 text-xs">
+            <form onSubmit={handleCrearResultado} className="space-y-3.5 text-xs">
+              <div>
+                <label className="block font-bold text-slate-700 mb-1">
+                  Vincular a Meta del Mes (Agenda Médica)
+                </label>
+                <select
+                  value={formResultado.control_id || ''}
+                  onChange={(e) => {
+                    const cid = e.target.value;
+                    if (!cid) {
+                      setFormResultado({ ...formResultado, control_id: '' });
+                    } else {
+                      const found = controles.find(c => String(c.control_id) === cid);
+                      if (found) {
+                        setFormResultado({
+                          ...formResultado,
+                          control_id: found.control_id,
+                          tipo_control: found.tipo_control,
+                          unidad: found.unidad,
+                        });
+                      }
+                    }
+                  }}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-health-petroleo font-semibold text-slate-700 bg-slate-50"
+                >
+                  <option value="">Medición libre (sin meta mensual)</option>
+                  {controles.map((c) => (
+                    <option key={c.control_id} value={c.control_id}>
+                      {c.tipo_control} • Meta: {c.criterio_meta_texto}
+                    </option>
+                  ))}
+                </select>
+                {formResultado.control_id ? (
+                  <p className="text-[11px] text-emerald-800 bg-emerald-50 border border-emerald-200/80 rounded-xl p-2.5 mt-2 font-medium">
+                    ✓ Vinculado a meta: <strong>{controles.find(c => String(c.control_id) === String(formResultado.control_id))?.criterio_meta_texto}</strong>. Al guardar, se evaluará automáticamente si está En Meta y actualizará tu indicador <strong>FCM</strong>.
+                  </p>
+                ) : (
+                  <p className="text-[11px] text-slate-500 bg-slate-50 border border-slate-200/60 rounded-xl p-2 mt-1.5">
+                    ℹ Medición libre: se guardará en tu historial clínico sin calificar meta mensual.
+                  </p>
+                )}
+              </div>
+
               <div>
                 <label className="block font-bold text-slate-700 mb-1">Tipo de Factor</label>
                 <select
                   value={formResultado.tipo_control}
+                  disabled={Boolean(formResultado.control_id)}
                   onChange={(e) => {
                     const tipo = e.target.value;
                     let u = 'mmHg';
@@ -275,7 +318,9 @@ export const ControlesTitular: React.FC = () => {
                     else if (tipo === 'IMC') u = 'kg/m²';
                     setFormResultado({ ...formResultado, tipo_control: tipo, unidad: u });
                   }}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-health-petroleo"
+                  className={`w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-health-petroleo ${
+                    formResultado.control_id ? 'bg-slate-100 text-slate-500 cursor-not-allowed' : ''
+                  }`}
                 >
                   <option value="Presión arterial">Presión arterial</option>
                   <option value="Glucosa">Glucosa</option>

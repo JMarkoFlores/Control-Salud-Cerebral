@@ -111,12 +111,33 @@ export class ControlController {
       }
 
       // Evaluar dentro_de_meta si está vinculado a un control programado
+      let finalControlId: number | null = control_id ? parseInt(control_id, 10) : null;
       let dentro_de_meta: boolean | null = null;
-      if (control_id) {
-        const pool = await (await import('../config/database')).getPool();
+
+      // Auto-vinculación inteligente: si no se especificó un control_id manual,
+      // buscar si el usuario tiene una meta activa en su agenda para este factor en el mes de la toma
+      const pool = await (await import('../config/database')).getPool();
+      if (!finalControlId && req.body.es_libre !== true) {
+        const fechaBaseStr = typeof fecha_medicion === 'string' ? fecha_medicion.slice(0, 10) : new Date(fecha_medicion).toISOString().slice(0, 10);
+        const mesPeriodo = getFirstDayOfMonth(new Date(fechaBaseStr + 'T00:00:00'));
+        const autoCtrl = await pool.request()
+          .input('pid', (await import('../config/database')).sql.Int, personaId)
+          .input('tc', (await import('../config/database')).sql.VarChar(30), tipo_control)
+          .input('mes', (await import('../config/database')).sql.Date, mesPeriodo)
+          .query(`
+            SELECT TOP 1 control_id
+            FROM control_programado
+            WHERE persona_id = @pid AND tipo_control = @tc AND mes_periodo = @mes AND vigente = 1
+          `);
+        if (autoCtrl.recordset.length > 0) {
+          finalControlId = autoCtrl.recordset[0].control_id;
+        }
+      }
+
+      if (finalControlId) {
         const ctrlRes = await pool.request()
-          .input('cid', (await import('../config/database')).sql.Int, control_id)
-          .query(`SELECT valor_meta_min, valor_meta_max, valor_meta_max_diast FROM control_programado WHERE control_id = @cid`);
+          .input('cid', (await import('../config/database')).sql.Int, finalControlId)
+          .query(`SELECT valor_meta_min, valor_meta_max, valor_meta_max_diast, criterio_meta_texto FROM control_programado WHERE control_id = @cid`);
 
         if (ctrlRes.recordset.length > 0) {
           const ctrl = ctrlRes.recordset[0];
@@ -136,7 +157,7 @@ export class ControlController {
       }
 
       const resultadoId = await this.controlRepo.insertResultadoControl({
-        control_id: control_id ? parseInt(control_id, 10) : null,
+        control_id: finalControlId,
         persona_id: personaId,
         tipo_control,
         fecha_medicion,
