@@ -9,7 +9,6 @@ interface AuthContextType {
   login: (correo: string, pass: string) => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => void;
   isTitular: boolean;
-  isAcompanante: boolean;
   isAdmin: boolean;
   refreshUser: () => Promise<void>;
 }
@@ -80,7 +79,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         login,
         logout,
         isTitular: user?.rol === 'TITULAR',
-        isAcompanante: user?.rol === 'ACOMPANANTE',
         isAdmin: user?.rol === 'ADMIN',
         refreshUser,
       }}

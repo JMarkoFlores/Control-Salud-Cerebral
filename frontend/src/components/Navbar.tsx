@@ -135,8 +135,7 @@ export const Navbar: React.FC<{ onToggleSidebar: () => void; isMobileOpen: boole
             </p>
             <div className="flex items-center justify-end gap-1.5 mt-0.5">
               <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                user?.rol === 'ADMIN' ? 'bg-purple-100 text-purple-700' :
-                user?.rol === 'ACOMPANANTE' ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700'
+                user?.rol === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
               }`}>
                 {user?.rol}
               </span>

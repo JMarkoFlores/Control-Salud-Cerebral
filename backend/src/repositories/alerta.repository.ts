@@ -127,7 +127,7 @@ export class AlertaRepository {
     motivo: 'Dato sin confirmar' | 'Meta semanal sin alcanzar' | 'Control vencido sin resultado' | 'Motivación diaria';
     mensaje?: string;
     destinatario_cuenta_id: number;
-    rol_destinatario: 'TITULAR' | 'ACOMPANANTE' | 'ADMIN';
+    rol_destinatario: 'TITULAR' | 'ADMIN';
   }): Promise<boolean> {
     const pool = await getPool();
     const cid = data.control_id ?? 0;

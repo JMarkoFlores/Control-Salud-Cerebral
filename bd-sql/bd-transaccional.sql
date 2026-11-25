@@ -50,7 +50,7 @@ CREATE TABLE cuenta_rol (
     persona_titular_id INT NOT NULL REFERENCES persona(persona_id),
     correo_acceso      VARCHAR(120) NOT NULL UNIQUE,
     password_hash      VARCHAR(255) NOT NULL,
-    rol                VARCHAR(20) NOT NULL CHECK (rol IN ('TITULAR', 'ACOMPANANTE', 'ADMIN')),
+    rol                VARCHAR(20) NOT NULL CHECK (rol IN ('TITULAR', 'ADMIN')),
     autorizado         BIT NOT NULL DEFAULT 1,
     nombre_contacto    VARCHAR(100) NULL,
     parentesco         VARCHAR(50) NULL,
@@ -216,7 +216,7 @@ CREATE TABLE alerta (
     motivo                 VARCHAR(60) NOT NULL CHECK (motivo IN ('Dato sin confirmar', 'Meta semanal sin alcanzar', 'Control vencido sin resultado', 'Motivación diaria')),
     mensaje                VARCHAR(250) NULL,
     destinatario_cuenta_id INT NOT NULL REFERENCES cuenta_rol(cuenta_id),
-    rol_destinatario       VARCHAR(20) NOT NULL CHECK (rol_destinatario IN ('TITULAR', 'ACOMPANANTE', 'ADMIN')),
+    rol_destinatario       VARCHAR(20) NOT NULL CHECK (rol_destinatario IN ('TITULAR', 'ADMIN')),
     estado                 VARCHAR(20) NOT NULL DEFAULT 'PENDIENTE' CHECK (estado IN ('PENDIENTE', 'ATENDIDA', 'CERRADA')),
     fecha_emision          DATETIME2 NOT NULL DEFAULT GETDATE(),
     fecha_atencion         DATETIME2 NULL

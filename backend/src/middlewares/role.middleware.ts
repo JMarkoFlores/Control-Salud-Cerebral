@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 
-export function requireRole(allowedRoles: Array<'TITULAR' | 'ACOMPANANTE' | 'ADMIN'>) {
+export function requireRole(allowedRoles: Array<'TITULAR' | 'ADMIN'>) {
   return (req: Request, res: Response, next: NextFunction): void => {
     if (!req.user) {
       res.status(401).json({

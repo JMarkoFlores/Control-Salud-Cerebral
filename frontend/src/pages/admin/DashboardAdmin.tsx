@@ -76,7 +76,7 @@ export const DashboardAdmin: React.FC<{ onNavigate?: (tab: string) => void }> = 
             {stats?.usuarios?.total_titulares || 0}
           </span>
           <span className="text-[11px] text-slate-400 block mt-1">
-            {stats?.usuarios?.total_acompanantes || 0} acompañantes registrados
+            {stats?.usuarios?.total_cuentas || 0} cuentas en sistema ({stats?.usuarios?.total_admins || 0} admin)
           </span>
         </div>
 

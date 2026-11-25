@@ -41,11 +41,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'perfil', label: 'Mi Perfil y Familia', icon: User },
   ];
 
-  const acompananteNav = [
-    { id: 'dashboard', label: 'Resumen del Titular', icon: LayoutDashboard },
-    { id: 'alertas', label: 'Alertas y Seguimiento', icon: AlertCircle },
-  ];
-
   const adminNav = [
     { id: 'dashboard', label: 'Dashboard Global', icon: LayoutDashboard },
     { id: 'usuarios', label: 'Gestión de Usuarios', icon: Users },
@@ -54,7 +49,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
     { id: 'catalogos', label: 'Catálogos y Distritos', icon: FolderTree },
   ];
 
-  const navItems = user?.rol === 'ADMIN' ? adminNav : user?.rol === 'ACOMPANANTE' ? acompananteNav : titularNav;
+  const navItems = user?.rol === 'ADMIN' ? adminNav : titularNav;
 
   return (
     <>
@@ -77,7 +72,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               Portal Activo
             </span>
             <p className="text-sm font-bold text-health-petroleo truncate mt-0.5">
-              {user?.rol === 'ADMIN' ? 'Gestión Global Piloto' : user?.rol === 'ACOMPANANTE' ? 'Acompañante Autorizado' : 'Titular del Programa'}
+              {user?.rol === 'ADMIN' ? 'Gestión Global Piloto' : 'Titular del Programa'}
             </p>
             {user?.distrito && (
               <span className="text-[11px] text-slate-500 block mt-1">

@@ -21,12 +21,16 @@ export class AdminController {
   getUsuarios = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
       const { rol, distrito, activo } = req.query;
-      const usuarios = await this.adminRepo.getUsuarios({
+      const result = await this.adminRepo.getUsuarios({
         rol: rol as string,
         distrito: distrito as string,
         activo: activo !== undefined ? activo === 'true' : undefined,
       });
-      res.json({ success: true, data: usuarios });
+      res.json({
+        success: true,
+        data: result.usuarios,
+        resumen: result.resumen,
+      });
     } catch (error) {
       next(error);
     }
@@ -254,6 +258,130 @@ export class AdminController {
       const { activo } = req.body;
       const ok = await this.logroRepo.toggleCatalogoLogro(id, Boolean(activo));
       res.json({ success: true, data: { message: 'Estado de logro actualizado.', ok } });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getTitulares = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const list = await this.adminRepo.getTitularesList();
+      res.json({ success: true, data: list });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  crearUsuario = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const {
+        nombres,
+        apellidos,
+        fecha_nacimiento,
+        sexo,
+        ubicacion_id,
+        correo_acceso,
+        password,
+        rol,
+        persona_titular_id,
+        nombre_contacto,
+        parentesco,
+      } = req.body;
+
+      if (!nombres || !apellidos || !fecha_nacimiento || !sexo || !ubicacion_id || !rol) {
+        res.status(400).json({ success: false, error: { message: 'Faltan campos obligatorios para el registro.' } });
+        return;
+      }
+
+      if (!['TITULAR', 'ADMIN'].includes(rol)) {
+        res.status(400).json({ success: false, error: { message: 'El rol debe ser TITULAR o ADMIN.' } });
+        return;
+      }
+
+      const result = await this.adminRepo.crearUsuario({
+        nombres,
+        apellidos,
+        fecha_nacimiento,
+        sexo,
+        ubicacion_id: parseInt(ubicacion_id, 10),
+        correo_acceso,
+        password,
+        rol,
+        persona_titular_id: persona_titular_id ? parseInt(persona_titular_id, 10) : undefined,
+        nombre_contacto,
+        parentesco,
+      });
+
+      res.status(201).json({
+        success: true,
+        data: { message: 'Usuario registrado exitosamente en el sistema.', ...result },
+      });
+    } catch (error: any) {
+      if (error?.number === 2627 || error?.message?.includes('UNIQUE KEY')) {
+        res.status(400).json({ success: false, error: { message: 'El correo electrónico ya se encuentra registrado por otra cuenta.' } });
+        return;
+      }
+      next(error);
+    }
+  };
+
+  actualizarUsuario = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const personaId = parseInt(req.params.id, 10);
+      const {
+        cuenta_id,
+        nombres,
+        apellidos,
+        fecha_nacimiento,
+        sexo,
+        ubicacion_id,
+        activo,
+        correo_acceso,
+        password,
+        rol,
+        nombre_contacto,
+        parentesco,
+      } = req.body;
+
+      await this.adminRepo.actualizarUsuario({
+        persona_id: personaId,
+        cuenta_id: cuenta_id ? parseInt(cuenta_id, 10) : null,
+        nombres,
+        apellidos,
+        fecha_nacimiento,
+        sexo,
+        ubicacion_id: parseInt(ubicacion_id, 10),
+        activo: activo !== undefined ? Boolean(activo) : true,
+        correo_acceso,
+        password,
+        rol,
+        nombre_contacto,
+        parentesco,
+      });
+
+      res.json({ success: true, data: { message: 'Usuario actualizado correctamente.' } });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  toggleActivoUsuario = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const personaId = parseInt(req.params.id, 10);
+      const cuentaId = req.query.cuenta_id ? parseInt(req.query.cuenta_id as string, 10) : undefined;
+      const activo = await this.adminRepo.toggleActivoUsuario(personaId, cuentaId);
+      res.json({ success: true, data: { message: `Usuario ${activo ? 'activado' : 'inactivado'} correctamente.`, activo } });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  eliminarUsuario = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const personaId = parseInt(req.params.id, 10);
+      const cuentaId = req.query.cuenta_id ? parseInt(req.query.cuenta_id as string, 10) : undefined;
+      const resElim = await this.adminRepo.eliminarUsuario(personaId, cuentaId);
+      res.json({ success: true, data: resElim });
     } catch (error) {
       next(error);
     }

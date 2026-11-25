@@ -1,4 +1,4 @@
-export type Role = 'TITULAR' | 'ACOMPANANTE' | 'ADMIN';
+export type Role = 'TITULAR' | 'ADMIN';
 
 export interface User {
   cuenta_id: number;

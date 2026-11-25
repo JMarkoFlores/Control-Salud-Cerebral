@@ -16,10 +16,6 @@ import { LogrosTitular } from './pages/titular/LogrosTitular';
 import { AlertasTitular } from './pages/titular/AlertasTitular';
 import { PerfilTitular } from './pages/titular/PerfilTitular';
 
-// Acompañante Views
-import { DashboardAcompanante } from './pages/acompanante/DashboardAcompanante';
-import { AlertasAcompanante } from './pages/acompanante/AlertasAcompanante';
-
 // Admin Views
 import { DashboardAdmin } from './pages/admin/DashboardAdmin';
 import { UsuariosAdmin } from './pages/admin/UsuariosAdmin';
@@ -52,13 +48,7 @@ const MainLayout: React.FC = () => {
   }
 
   const renderContent = () => {
-    // 1. Rol ACOMPANANTE
-    if (user.rol === 'ACOMPANANTE') {
-      if (currentTab === 'alertas') return <AlertasAcompanante />;
-      return <DashboardAcompanante onNavigate={(tab) => setCurrentTab(tab)} />;
-    }
-
-    // 2. Rol ADMIN
+    // 1. Rol ADMIN
     if (user.rol === 'ADMIN') {
       if (currentTab === 'usuarios') return <UsuariosAdmin />;
       if (currentTab === 'reportes') return <ReportesAdmin />;

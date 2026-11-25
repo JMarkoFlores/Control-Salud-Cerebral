@@ -5,7 +5,7 @@ export interface UserAccountRecord {
   persona_titular_id: number;
   correo_acceso: string;
   password_hash: string;
-  rol: 'TITULAR' | 'ACOMPANANTE' | 'ADMIN';
+  rol: 'TITULAR' | 'ADMIN';
   autorizado: boolean;
   nombre_contacto?: string;
   parentesco?: string;
@@ -119,7 +119,7 @@ export class AuthRepository {
     persona_titular_id: number;
     correo_acceso: string;
     password_hash: string;
-    rol: 'TITULAR' | 'ACOMPANANTE' | 'ADMIN';
+    rol: 'TITULAR' | 'ADMIN';
     nombre_contacto?: string;
     parentesco?: string;
   }): Promise<number> {

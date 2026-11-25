@@ -7,6 +7,6 @@ const router = Router();
 const controller = new DashboardController();
 
 router.get('/titular', authenticateJWT, requireRole(['TITULAR', 'ADMIN']), controller.getTitularDashboard);
-router.get('/acompanante', authenticateJWT, requireRole(['ACOMPANANTE', 'ADMIN']), controller.getAcompananteDashboard);
+router.get('/acompanante', authenticateJWT, requireRole(['ADMIN']), controller.getAcompananteDashboard);
 
 export default router;

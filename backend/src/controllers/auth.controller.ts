@@ -182,72 +182,21 @@ export class AuthController {
     }
   };
 
-  getAcompanantes = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const personaId = req.user!.persona_id;
-      const list = await this.authRepo.getAcompanantesByTitular(personaId);
-      res.json({ success: true, data: list });
-    } catch (error) {
-      next(error);
-    }
+  getAcompanantes = async (req: Request, res: Response): Promise<void> => {
+    res.json({ success: true, data: [] });
   };
 
-  crearAcompanante = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const personaId = req.user!.persona_id;
-      const { correo, password, nombre_contacto, parentesco } = req.body;
-
-      if (!correo || !password || !nombre_contacto) {
-        res.status(400).json({
-          success: false,
-          error: { code: 'INVALID_INPUT', message: 'Correo, contraseña y nombre del acompañante son obligatorios.' },
-        });
-        return;
-      }
-
-      const existing = await this.authRepo.findByEmail(correo);
-      if (existing) {
-        res.status(409).json({
-          success: false,
-          error: { code: 'EMAIL_EXISTS', message: 'Este correo ya tiene una cuenta activa en el sistema.' },
-        });
-        return;
-      }
-
-      const password_hash = await bcrypt.hash(password, 10);
-      const cuenta_id = await this.authRepo.createAccount({
-        persona_titular_id: personaId,
-        correo_acceso: correo,
-        password_hash,
-        rol: 'ACOMPANANTE',
-        nombre_contacto,
-        parentesco: parentesco || 'Familiar',
-      });
-
-      res.status(201).json({
-        success: true,
-        data: { message: 'Acompañante autorizado registrado con éxito.', cuenta_id },
-      });
-    } catch (error) {
-      next(error);
-    }
+  crearAcompanante = async (req: Request, res: Response): Promise<void> => {
+    res.status(400).json({
+      success: false,
+      error: { message: 'El rol ACOMPAÑANTE ha sido discontinuado del sistema. Solo se admiten roles TITULAR y ADMIN.' },
+    });
   };
 
-  toggleAcompanante = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
-    try {
-      const personaId = req.user!.persona_id;
-      const cuentaId = parseInt(req.params.cuentaId, 10);
-      const { autorizado } = req.body;
-
-      const ok = await this.authRepo.setAcompananteAutorizado(cuentaId, personaId, Boolean(autorizado));
-      if (!ok) {
-        res.status(404).json({ success: false, error: { message: 'No se encontró el acompañante para este titular.' } });
-        return;
-      }
-
-      res.json({ success: true, data: { message: 'Permiso de acompañante actualizado correctamente.' } });
-    } catch (error) {
-      next(error);
-    }
+  toggleAcompanante = async (req: Request, res: Response): Promise<void> => {
+    res.status(400).json({
+      success: false,
+      error: { message: 'El rol ACOMPAÑANTE ha sido discontinuado del sistema.' },
+    });
   };
 }

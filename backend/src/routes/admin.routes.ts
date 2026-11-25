@@ -11,6 +11,11 @@ router.use(requireRole(['ADMIN']));
 
 router.get('/stats', controller.getStats);
 router.get('/usuarios', controller.getUsuarios);
+router.get('/titulares', controller.getTitulares);
+router.post('/usuarios', controller.crearUsuario);
+router.put('/usuarios/:id', controller.actualizarUsuario);
+router.patch('/usuarios/:id/toggle-activo', controller.toggleActivoUsuario);
+router.delete('/usuarios/:id', controller.eliminarUsuario);
 router.get('/reportes/actividad', controller.getReporteActividad);
 router.get('/reportes/social', controller.getReporteSocial);
 router.get('/reportes/cardio', controller.getReporteCardio);

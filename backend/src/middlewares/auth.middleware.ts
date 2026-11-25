@@ -7,7 +7,7 @@ export interface AuthUser {
   persona_id: number;
   persona_titular_id: number;
   correo_acceso: string;
-  rol: 'TITULAR' | 'ACOMPANANTE' | 'ADMIN';
+  rol: 'TITULAR' | 'ADMIN';
   nombres: string;
   apellidos: string;
   codigo_interno: string;

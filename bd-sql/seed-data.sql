@@ -60,7 +60,6 @@ GO
 -- Contraseñas de prueba:
 -- Admin:        admin@saludcerebral.pe    / Admin123!
 -- Titular:      carlos.mendoza@gmail.com  / Titular123!
--- Acompañante:  ana.salazar@gmail.com     / Acompanante123! (acompaña a P-001)
 -- Titular 2:    maria.flores@gmail.com    / Titular123!
 -- -----------------------------------------------------------------------------
 DECLARE @id_admin INT = (SELECT persona_id FROM persona WHERE codigo_interno = 'P-000');
@@ -77,12 +76,6 @@ IF NOT EXISTS (SELECT 1 FROM cuenta_rol WHERE correo_acceso = 'carlos.mendoza@gm
 BEGIN
     INSERT INTO cuenta_rol (persona_titular_id, correo_acceso, password_hash, rol, autorizado, nombre_contacto, parentesco)
     VALUES (@id_carlos, 'carlos.mendoza@gmail.com', '$2a$10$dfELO2aC5ihKj.HizwrUY.DqwX2KTD7l6SDMKRvwRbbhZFbrmzBda', 'TITULAR', 1, 'Carlos Mendoza', 'Titular');
-END
-
-IF NOT EXISTS (SELECT 1 FROM cuenta_rol WHERE correo_acceso = 'ana.salazar@gmail.com')
-BEGIN
-    INSERT INTO cuenta_rol (persona_titular_id, correo_acceso, password_hash, rol, autorizado, nombre_contacto, parentesco)
-    VALUES (@id_carlos, 'ana.salazar@gmail.com', '$2a$10$P6IX1LLv4cz0fuDZcN3R5e6iS.0aYmgeqzK1GhJ34Ne4A3q6Vj6Pi', 'ACOMPANANTE', 1, 'Ana Salazar Mendoza', 'Hija');
 END
 
 IF NOT EXISTS (SELECT 1 FROM cuenta_rol WHERE correo_acceso = 'maria.flores@gmail.com')
