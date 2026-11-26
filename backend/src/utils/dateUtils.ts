@@ -4,23 +4,35 @@
  */
 
 export function getPeruDate(): Date {
-  // Retorna fecha actual ajustada
   return new Date();
 }
 
 /**
- * Convierte de manera segura cualquier string o Date a un objeto Date válido para SQL Server DateTime2
+ * Convierte de manera segura cualquier string o Date a un objeto Date válido en hora local
  */
 export function parseToDate(val: string | Date): Date {
   if (val instanceof Date) return val;
   const str = String(val).trim();
   // Si solo tiene formato fecha YYYY-MM-DD
   if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
-    return new Date(`${str}T00:00:00`);
+    const [y, m, d] = str.split('-').map(Number);
+    return new Date(y, m - 1, d);
   }
   // Si viene como YYYY-MM-DDTHH:mm o YYYY-MM-DD HH:mm (sin segundos)
   if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}$/.test(str)) {
-    return new Date(str.replace(' ', 'T') + ':00');
+    const clean = str.replace('T', ' ');
+    const [datePart, timePart] = clean.split(' ');
+    const [y, m, d] = datePart.split('-').map(Number);
+    const [hh, mm] = timePart.split(':').map(Number);
+    return new Date(y, m - 1, d, hh, mm);
+  }
+  // Si viene como YYYY-MM-DDTHH:mm:ss o YYYY-MM-DD HH:mm:ss
+  if (/^\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}:\d{2}/.test(str)) {
+    const clean = str.replace('T', ' ');
+    const [datePart, timePart] = clean.split(' ');
+    const [y, m, d] = datePart.split('-').map(Number);
+    const [hh, mm, ss] = timePart.split(':').map(Number);
+    return new Date(y, m - 1, d, hh, mm, ss);
   }
   const d = new Date(str);
   if (isNaN(d.getTime())) {
@@ -28,6 +40,28 @@ export function parseToDate(val: string | Date): Date {
     if (!isNaN(alt.getTime())) return alt;
   }
   return d;
+}
+
+/**
+ * Formatea una fecha a YYYY-MM-DD en hora local exacta, sin conversión UTC ni desfases
+ */
+export function formatDateYMD(val: string | Date = new Date()): string {
+  if (typeof val === 'string') {
+    const clean = val.replace('T', ' ').trim();
+    return clean.split(' ')[0];
+  }
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const y = val.getFullYear();
+  const m = pad(val.getMonth() + 1);
+  const d = pad(val.getDate());
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Retorna la fecha local actual en formato YYYY-MM-DD
+ */
+export function getTodayString(): string {
+  return formatDateYMD(new Date());
 }
 
 /**
@@ -59,25 +93,25 @@ export function formatToSqlDateTime(val: string | Date): string {
 }
 
 /**
- * Obtiene el Lunes de la semana para una fecha dada (en formato YYYY-MM-DD)
+ * Obtiene el Lunes de la semana para una fecha dada (en formato YYYY-MM-DD en hora local)
  */
-export function getMondayOfCurrentWeek(d: Date = new Date()): string {
-  const date = new Date(d);
+export function getMondayOfCurrentWeek(d: Date | string = new Date()): string {
+  const date = typeof d === 'string' ? parseToDate(d) : new Date(d);
   const day = date.getDay(); // 0 es Domingo, 1 es Lunes, etc.
   const diff = date.getDate() - day + (day === 0 ? -6 : 1); // Ajustar cuando es Domingo
-  const monday = new Date(date.setDate(diff));
-  return monday.toISOString().split('T')[0];
+  date.setDate(diff);
+  return formatDateYMD(date);
 }
 
 /**
- * Obtiene el Domingo de la semana para una fecha dada (en formato YYYY-MM-DD)
+ * Obtiene el Domingo de la semana para una fecha dada (en formato YYYY-MM-DD en hora local)
  */
-export function getSundayOfCurrentWeek(d: Date = new Date()): string {
+export function getSundayOfCurrentWeek(d: Date | string = new Date()): string {
   const mondayStr = getMondayOfCurrentWeek(d);
-  const monday = new Date(mondayStr + 'T00:00:00');
+  const monday = parseToDate(`${mondayStr} 00:00:00`);
   const sunday = new Date(monday);
   sunday.setDate(monday.getDate() + 6);
-  return sunday.toISOString().split('T')[0];
+  return formatDateYMD(sunday);
 }
 
 /**
@@ -85,14 +119,14 @@ export function getSundayOfCurrentWeek(d: Date = new Date()): string {
  */
 export function getDaysOfWeek(mondayDateStr: string): Array<{ fecha: string; nombreDia: string; esHoy: boolean; esPasado: boolean; esFuturo: boolean }> {
   const diasNombres = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo'];
-  const base = new Date(mondayDateStr + 'T00:00:00');
-  const hoyStr = new Date().toISOString().split('T')[0];
+  const base = parseToDate(`${mondayDateStr} 00:00:00`);
+  const hoyStr = getTodayString();
 
   const result = [];
   for (let i = 0; i < 7; i++) {
     const cur = new Date(base);
     cur.setDate(base.getDate() + i);
-    const curStr = cur.toISOString().split('T')[0];
+    const curStr = formatDateYMD(cur);
     result.push({
       fecha: curStr,
       nombreDia: diasNombres[i],
@@ -105,11 +139,12 @@ export function getDaysOfWeek(mondayDateStr: string): Array<{ fecha: string; nom
 }
 
 /**
- * Obtiene el primer día del mes actual (YYYY-MM-01)
+ * Obtiene el primer día del mes actual (YYYY-MM-01) en hora local
  */
-export function getFirstDayOfMonth(d: Date = new Date()): string {
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, '0');
+export function getFirstDayOfMonth(d: Date | string = new Date()): string {
+  const date = typeof d === 'string' ? parseToDate(d) : new Date(d);
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}-01`;
 }
 
@@ -118,8 +153,8 @@ export function getFirstDayOfMonth(d: Date = new Date()): string {
  */
 export function formatDateDMY(d: Date | string | null | undefined): string {
   if (!d) return '—';
-  const str = typeof d === 'string' ? d : d.toISOString();
-  const parts = str.split('T')[0].split('-');
+  const str = typeof d === 'string' ? d.replace('T', ' ').trim().split(' ')[0] : formatDateYMD(d);
+  const parts = str.split('-');
   if (parts.length === 3) {
     return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }

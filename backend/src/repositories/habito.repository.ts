@@ -15,8 +15,8 @@ export class HabitoRepository {
         SELECT TOP 1 meta_id, persona_id, habito, CONVERT(VARCHAR(10), inicio_semana, 120) AS inicio_semana,
                valor_meta, unidad, version_meta, origen_meta, vigente
         FROM meta_semanal
-        WHERE persona_id = @persona_id AND habito = @habito AND inicio_semana = @inicio_semana AND vigente = 1
-        ORDER BY version_meta DESC
+        WHERE persona_id = @persona_id AND habito = @habito AND inicio_semana <= @inicio_semana AND vigente = 1
+        ORDER BY inicio_semana DESC, version_meta DESC
       `);
     return res.recordset[0] || null;
   }

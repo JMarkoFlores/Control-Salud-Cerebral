@@ -97,6 +97,19 @@ export class AlertaRepository {
     return res.recordset[0].ejecucion_id;
   }
 
+  async actualizarEjecucion(ejecucionId: number, estado: 'EXITOSO' | 'ERROR', alertasGeneradas: number): Promise<void> {
+    const pool = await getPool();
+    await pool.request()
+      .input('eid', sql.Int, ejecucionId)
+      .input('estado', sql.VarChar(20), estado)
+      .input('generadas', sql.Int, alertasGeneradas)
+      .query(`
+        UPDATE ejecucion_regla 
+        SET resultado_estado = @estado, alertas_generadas = @generadas 
+        WHERE ejecucion_id = @eid
+      `);
+  }
+
   async getHistorialEjecuciones(limit: number = 20): Promise<any[]> {
     const pool = await getPool();
     const res = await pool.request()

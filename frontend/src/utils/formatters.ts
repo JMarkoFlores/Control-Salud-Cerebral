@@ -28,13 +28,20 @@ export function formatDateTimePE(dateVal: string | Date | null | undefined): str
  */
 export function formatDatePE(dateVal: string | Date | null | undefined): string {
   if (!dateVal) return '—';
-  const str = typeof dateVal === 'string' ? dateVal : dateVal.toISOString();
-  const datePart = str.split('T')[0].split(' ')[0];
-  const [y, m, d] = datePart.split('-');
-  if (y && m && d) {
-    return `${d}/${m}/${y}`;
+  if (typeof dateVal === 'string') {
+    const clean = dateVal.replace('T', ' ').trim();
+    const datePart = clean.split(' ')[0];
+    const [y, m, d] = datePart.split('-');
+    if (y && m && d) {
+      return `${d}/${m}/${y}`;
+    }
+    return dateVal;
   }
-  return str;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const d = pad(dateVal.getDate());
+  const m = pad(dateVal.getMonth() + 1);
+  const y = dateVal.getFullYear();
+  return `${d}/${m}/${y}`;
 }
 
 /**

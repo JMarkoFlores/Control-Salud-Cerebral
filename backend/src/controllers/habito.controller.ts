@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { HabitoRepository } from '../repositories/habito.repository';
 import { EvaluacionService } from '../services/evaluacion.service';
-import { getMondayOfCurrentWeek, getSundayOfCurrentWeek, getDaysOfWeek } from '../utils/dateUtils';
+import { getMondayOfCurrentWeek, getSundayOfCurrentWeek, getDaysOfWeek, formatDateYMD } from '../utils/dateUtils';
 
 export class HabitoController {
   private habitoRepo = new HabitoRepository();
@@ -101,7 +101,7 @@ export class HabitoController {
       });
 
       // Auto-confirmar el día correspondiente
-      const fechaCorta = typeof fecha_hora === 'string' ? fecha_hora.slice(0, 10) : new Date(fecha_hora).toISOString().slice(0, 10);
+      const fechaCorta = typeof fecha_hora === 'string' ? fecha_hora.slice(0, 10) : formatDateYMD(fecha_hora);
       await this.habitoRepo.upsertConfirmacionDiaria({
         persona_id: personaId,
         fecha: fechaCorta,
@@ -175,7 +175,7 @@ export class HabitoController {
       });
 
       // Auto-confirmar el día
-      const fechaCorta = typeof fecha_hora === 'string' ? fecha_hora.slice(0, 10) : new Date(fecha_hora).toISOString().slice(0, 10);
+      const fechaCorta = typeof fecha_hora === 'string' ? fecha_hora.slice(0, 10) : formatDateYMD(fecha_hora);
       await this.habitoRepo.upsertConfirmacionDiaria({
         persona_id: personaId,
         fecha: fechaCorta,
@@ -236,12 +236,12 @@ export class HabitoController {
         const confSoc = confirmaciones.find(c => c.fecha === d.fecha && c.habito === 'CONTACTO_SOCIAL');
 
         const sesionesDia = sesiones.filter(s => {
-          const sFecha = (typeof s.fecha_hora === 'string' ? s.fecha_hora : s.fecha_hora.toISOString()).slice(0, 10);
+          const sFecha = typeof s.fecha_hora === 'string' ? s.fecha_hora.slice(0, 10) : formatDateYMD(s.fecha_hora);
           return sFecha === d.fecha;
         });
 
         const contactosDia = contactos.filter(c => {
-          const cFecha = (typeof c.fecha_hora === 'string' ? c.fecha_hora : c.fecha_hora.toISOString()).slice(0, 10);
+          const cFecha = typeof c.fecha_hora === 'string' ? c.fecha_hora.slice(0, 10) : formatDateYMD(c.fecha_hora);
           return cFecha === d.fecha;
         });
 

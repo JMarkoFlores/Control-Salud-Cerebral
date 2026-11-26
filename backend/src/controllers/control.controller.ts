@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { ControlRepository } from '../repositories/control.repository';
 import { EvaluacionService } from '../services/evaluacion.service';
-import { getFirstDayOfMonth, formatDateDMY } from '../utils/dateUtils';
+import { getFirstDayOfMonth, formatDateDMY, formatDateYMD } from '../utils/dateUtils';
 
 export class ControlController {
   private controlRepo = new ControlRepository();
@@ -118,7 +118,7 @@ export class ControlController {
       // buscar si el usuario tiene una meta activa en su agenda para este factor en el mes de la toma
       const pool = await (await import('../config/database')).getPool();
       if (!finalControlId && req.body.es_libre !== true) {
-        const fechaBaseStr = typeof fecha_medicion === 'string' ? fecha_medicion.slice(0, 10) : new Date(fecha_medicion).toISOString().slice(0, 10);
+        const fechaBaseStr = typeof fecha_medicion === 'string' ? fecha_medicion.slice(0, 10) : formatDateYMD(fecha_medicion);
         const mesPeriodo = getFirstDayOfMonth(new Date(fechaBaseStr + 'T00:00:00'));
         const autoCtrl = await pool.request()
           .input('pid', (await import('../config/database')).sql.Int, personaId)

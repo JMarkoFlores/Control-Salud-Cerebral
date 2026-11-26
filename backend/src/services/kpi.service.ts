@@ -1,7 +1,7 @@
 import { HabitoRepository } from '../repositories/habito.repository';
 import { ControlRepository } from '../repositories/control.repository';
 import { ESTADOS_KPI } from '../config/constants';
-import { getMondayOfCurrentWeek, getSundayOfCurrentWeek, getFirstDayOfMonth } from '../utils/dateUtils';
+import { getMondayOfCurrentWeek, getSundayOfCurrentWeek, getFirstDayOfMonth, getTodayString, formatDateYMD, parseToDate } from '../utils/dateUtils';
 
 export interface KpiResult {
   codigoKpi: 'CAF' | 'CCS' | 'FCM';
@@ -52,22 +52,25 @@ export class KpiService {
 
     // 3. Confirmaciones diarias de la semana
     const confirmaciones = await this.habitoRepo.getConfirmacionesSemana(personaId, monday, sunday);
-    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoyStr = getTodayString();
 
     // Verificar si hay días pasados sin confirmar
     const diasConfirmados = new Set(confirmaciones.filter(c => c.habito === 'ACTIVIDAD_FISICA').map(c => c.fecha));
     let diasSinConfirmarPasados = 0;
 
     // Iterar días de la semana hasta hoy (o todos los 7 si la semana ya terminó)
-    const baseDate = new Date(monday + 'T00:00:00');
+    const baseDate = parseToDate(`${monday} 00:00:00`);
     for (let i = 0; i < 7; i++) {
       const cur = new Date(baseDate);
       cur.setDate(baseDate.getDate() + i);
-      const curStr = cur.toISOString().split('T')[0];
+      const curStr = formatDateYMD(cur);
       if (curStr <= hoyStr) {
         if (!diasConfirmados.has(curStr)) {
           // Si hubo sesión ese día, cuenta como confirmado
-          const tieneSesion = sesiones.some(s => s.fecha_hora.toISOString?.().split('T')[0] === curStr || String(s.fecha_hora).startsWith(curStr));
+          const tieneSesion = sesiones.some(s => {
+            const sDate = typeof s.fecha_hora === 'string' ? s.fecha_hora.slice(0, 10) : formatDateYMD(s.fecha_hora);
+            return sDate === curStr;
+          });
           if (!tieneSesion) {
             diasSinConfirmarPasados++;
           }
@@ -154,24 +157,21 @@ export class KpiService {
     // 2. Contactos válidos: Múltiples contactos en el mismo día cuentan como 1 solo día
     const contactos = await this.habitoRepo.getContactosSociales(personaId, monday, sunday, true);
     const fechasUnicas = new Set(
-      contactos.map(c => {
-        const d = c.fecha_hora;
-        return typeof d === 'string' ? d.split('T')[0].split(' ')[0] : d.toISOString().split('T')[0];
-      })
+      contactos.map(c => typeof c.fecha_hora === 'string' ? c.fecha_hora.slice(0, 10) : formatDateYMD(c.fecha_hora))
     );
     const diasConContacto = fechasUnicas.size;
 
     // 3. Confirmaciones diarias
     const confirmaciones = await this.habitoRepo.getConfirmacionesSemana(personaId, monday, sunday);
-    const hoyStr = new Date().toISOString().split('T')[0];
+    const hoyStr = getTodayString();
     const diasConfirmados = new Set(confirmaciones.filter(c => c.habito === 'CONTACTO_SOCIAL').map(c => c.fecha));
 
     let diasSinConfirmarPasados = 0;
-    const baseDate = new Date(monday + 'T00:00:00');
+    const baseDate = parseToDate(`${monday} 00:00:00`);
     for (let i = 0; i < 7; i++) {
       const cur = new Date(baseDate);
       cur.setDate(baseDate.getDate() + i);
-      const curStr = cur.toISOString().split('T')[0];
+      const curStr = formatDateYMD(cur);
       if (curStr <= hoyStr) {
         if (!diasConfirmados.has(curStr) && !fechasUnicas.has(curStr)) {
           diasSinConfirmarPasados++;

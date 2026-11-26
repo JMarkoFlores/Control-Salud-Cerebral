@@ -2,7 +2,7 @@ import { AlertaRepository } from '../repositories/alerta.repository';
 import { HabitoRepository } from '../repositories/habito.repository';
 import { ControlRepository } from '../repositories/control.repository';
 import { AuthRepository } from '../repositories/auth.repository';
-import { getMondayOfCurrentWeek, getFirstDayOfMonth } from '../utils/dateUtils';
+import { getMondayOfCurrentWeek, getFirstDayOfMonth, getTodayString, formatDateYMD } from '../utils/dateUtils';
 
 export class AlertaService {
   private alertaRepo = new AlertaRepository();
@@ -20,29 +20,35 @@ export class AlertaService {
     const detalles: any[] = [];
 
     for (const regla of reglasActivas) {
+      let ejecucionId: number | null = null;
       try {
+        ejecucionId = await this.alertaRepo.registrarEjecucion(regla.regla_id, 'EXITOSO', 0);
         let generadas = 0;
         switch (regla.codigo_regla) {
           case 'REG-01':
-            generadas = await this.ejecutarRegla01(regla.regla_id);
+            generadas = await this.ejecutarRegla01(regla.regla_id, ejecucionId);
             break;
           case 'REG-02':
-            generadas = await this.ejecutarRegla02(regla.regla_id);
+            generadas = await this.ejecutarRegla02(regla.regla_id, ejecucionId);
             break;
           case 'REG-03':
-            generadas = await this.ejecutarRegla03(regla.regla_id);
+            generadas = await this.ejecutarRegla03(regla.regla_id, ejecucionId);
             break;
           case 'REG-04':
-            generadas = await this.ejecutarRegla04(regla.regla_id);
+            generadas = await this.ejecutarRegla04(regla.regla_id, ejecucionId);
             break;
         }
 
-        await this.alertaRepo.registrarEjecucion(regla.regla_id, 'EXITOSO', generadas);
+        await this.alertaRepo.actualizarEjecucion(ejecucionId, 'EXITOSO', generadas);
         totalGeneradas += generadas;
         detalles.push({ codigo_regla: regla.codigo_regla, generadas, estado: 'EXITOSO' });
       } catch (err: any) {
         console.error(`Error en regla ${regla.codigo_regla}:`, err.message);
-        await this.alertaRepo.registrarEjecucion(regla.regla_id, 'ERROR', 0);
+        if (ejecucionId) {
+          await this.alertaRepo.actualizarEjecucion(ejecucionId, 'ERROR', 0);
+        } else {
+          await this.alertaRepo.registrarEjecucion(regla.regla_id, 'ERROR', 0);
+        }
         detalles.push({ codigo_regla: regla.codigo_regla, generadas: 0, estado: 'ERROR', error: err.message });
       }
     }
@@ -55,7 +61,7 @@ export class AlertaService {
    */
   async verificarAlertasAlLogin(personaId: number, cuentaId: number): Promise<void> {
     try {
-      const hoy = new Date().toISOString().split('T')[0];
+      const hoy = getTodayString();
       const periodoHoy = `D-${hoy}`;
 
       // Regla 04: Motivación diaria si hoy no tiene actividad física
@@ -65,10 +71,11 @@ export class AlertaService {
         const reglas = await this.alertaRepo.getReglas();
         const regla04 = reglas.find(r => r.codigo_regla === 'REG-04');
         if (regla04 && regla04.activa) {
+          const ejecId = await this.alertaRepo.registrarEjecucion(regla04.regla_id, 'EXITOSO', 1);
           await this.alertaRepo.insertarAlertaSiNoExiste({
             persona_id: personaId,
             regla_id: regla04.regla_id,
-            ejecucion_id: 1, // ejecución base
+            ejecucion_id: ejecId,
             tipo_seguimiento: 'ACTIVIDAD_FISICA',
             periodo_referencia: periodoHoy,
             motivo: 'Motivación diaria',
@@ -86,14 +93,12 @@ export class AlertaService {
   /**
    * REG-01: Datos de hábito sin confirmar
    */
-  private async ejecutarRegla01(reglaId: number): Promise<number> {
+  private async ejecutarRegla01(reglaId: number, ejecucionId: number): Promise<number> {
     const monday = getMondayOfCurrentWeek();
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = getTodayString();
     let contador = 0;
 
     // Buscar titulares activos
-    const titulares = await this.authRepo.findByEmail('carlos.mendoza@gmail.com'); // sample search or all
-    // Para generalizar, consultamos titulares en la BD
     const pool = await (await import('../config/database')).getPool();
     const res = await pool.request().query("SELECT persona_id FROM persona WHERE activo = 1 AND codigo_interno <> 'P-000'");
 
@@ -105,7 +110,7 @@ export class AlertaService {
       // Si ayer no está confirmado
       const ayer = new Date();
       ayer.setDate(ayer.getDate() - 1);
-      const ayerStr = ayer.toISOString().split('T')[0];
+      const ayerStr = formatDateYMD(ayer);
 
       if (ayerStr >= monday && !confSet.has(ayerStr)) {
         // Encontrar cuenta titular
@@ -118,7 +123,7 @@ export class AlertaService {
           const inserted = await this.alertaRepo.insertarAlertaSiNoExiste({
             persona_id: personaId,
             regla_id: reglaId,
-            ejecucion_id: 1,
+            ejecucion_id: ejecucionId,
             tipo_seguimiento: 'ACTIVIDAD_FISICA',
             periodo_referencia: `CONF-${ayerStr}`,
             motivo: 'Dato sin confirmar',
@@ -137,7 +142,7 @@ export class AlertaService {
   /**
    * REG-02: Meta semanal sin alcanzar al cierre
    */
-  private async ejecutarRegla02(reglaId: number): Promise<number> {
+  private async ejecutarRegla02(reglaId: number, ejecucionId: number): Promise<number> {
     const monday = getMondayOfCurrentWeek();
     let contador = 0;
     const pool = await (await import('../config/database')).getPool();
@@ -156,7 +161,7 @@ export class AlertaService {
           const inserted = await this.alertaRepo.insertarAlertaSiNoExiste({
             persona_id: personaId,
             regla_id: reglaId,
-            ejecucion_id: 1,
+            ejecucion_id: ejecucionId,
             tipo_seguimiento: 'ACTIVIDAD_FISICA',
             periodo_referencia: `W-${monday}`,
             motivo: 'Meta semanal sin alcanzar',
@@ -174,9 +179,9 @@ export class AlertaService {
   /**
    * REG-03: Control vencido sin resultado
    */
-  private async ejecutarRegla03(reglaId: number): Promise<number> {
+  private async ejecutarRegla03(reglaId: number, ejecucionId: number): Promise<number> {
     const primerDiaMes = getFirstDayOfMonth();
-    const hoy = new Date().toISOString().split('T')[0];
+    const hoy = getTodayString();
     let contador = 0;
     const pool = await (await import('../config/database')).getPool();
 
@@ -199,7 +204,7 @@ export class AlertaService {
       const inserted = await this.alertaRepo.insertarAlertaSiNoExiste({
         persona_id: row.persona_id,
         regla_id: reglaId,
-        ejecucion_id: 1,
+        ejecucion_id: ejecucionId,
         tipo_seguimiento: 'CONTROL_CARDIOMETABOLICO',
         control_id: row.control_id,
         periodo_referencia: `CTRL-${row.control_id}`,
@@ -217,8 +222,8 @@ export class AlertaService {
   /**
    * REG-04: Motivación diaria
    */
-  private async ejecutarRegla04(reglaId: number): Promise<number> {
-    const hoy = new Date().toISOString().split('T')[0];
+  private async ejecutarRegla04(reglaId: number, ejecucionId: number): Promise<number> {
+    const hoy = getTodayString();
     let contador = 0;
     const pool = await (await import('../config/database')).getPool();
 
@@ -235,7 +240,7 @@ export class AlertaService {
         const inserted = await this.alertaRepo.insertarAlertaSiNoExiste({
           persona_id: row.persona_id,
           regla_id: reglaId,
-          ejecucion_id: 1,
+          ejecucion_id: ejecucionId,
           tipo_seguimiento: 'ACTIVIDAD_FISICA',
           periodo_referencia: `D-${hoy}`,
           motivo: 'Motivación diaria',
