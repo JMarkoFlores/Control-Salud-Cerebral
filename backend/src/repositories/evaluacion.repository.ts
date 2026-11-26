@@ -37,17 +37,36 @@ export class EvaluacionRepository {
       .input('categoria_riesgo', sql.VarChar(20), data.categoria_riesgo)
       .input('version_algoritmo', sql.VarChar(20), data.version_algoritmo || 'v1.0')
       .query(`
-        INSERT INTO evaluacion_salud_cerebral (
-          persona_id, fecha_evaluacion, periodo_referencia, puntaje_total,
-          puntaje_actividad, puntaje_social, puntaje_cardiometabolico,
-          categoria_riesgo, version_algoritmo
+        IF EXISTS (
+          SELECT 1 FROM evaluacion_salud_cerebral
+          WHERE persona_id = @persona_id AND periodo_referencia = @periodo_referencia
         )
-        OUTPUT INSERTED.evaluacion_id
-        VALUES (
-          @persona_id, GETDATE(), @periodo_referencia, @puntaje_total,
-          @puntaje_actividad, @puntaje_social, @puntaje_cardiometabolico,
-          @categoria_riesgo, @version_algoritmo
-        )
+        BEGIN
+          UPDATE evaluacion_salud_cerebral
+          SET fecha_evaluacion = GETDATE(),
+              puntaje_total = @puntaje_total,
+              puntaje_actividad = @puntaje_actividad,
+              puntaje_social = @puntaje_social,
+              puntaje_cardiometabolico = @puntaje_cardiometabolico,
+              categoria_riesgo = @categoria_riesgo,
+              version_algoritmo = @version_algoritmo
+          OUTPUT INSERTED.evaluacion_id
+          WHERE persona_id = @persona_id AND periodo_referencia = @periodo_referencia;
+        END
+        ELSE
+        BEGIN
+          INSERT INTO evaluacion_salud_cerebral (
+            persona_id, fecha_evaluacion, periodo_referencia, puntaje_total,
+            puntaje_actividad, puntaje_social, puntaje_cardiometabolico,
+            categoria_riesgo, version_algoritmo
+          )
+          OUTPUT INSERTED.evaluacion_id
+          VALUES (
+            @persona_id, GETDATE(), @periodo_referencia, @puntaje_total,
+            @puntaje_actividad, @puntaje_social, @puntaje_cardiometabolico,
+            @categoria_riesgo, @version_algoritmo
+          );
+        END
       `);
     return res.recordset[0].evaluacion_id;
   }

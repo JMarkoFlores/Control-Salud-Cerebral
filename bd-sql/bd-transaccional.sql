@@ -26,6 +26,7 @@ CREATE TABLE ubicacion (
 );
 GO
 
+
 -- -----------------------------------------------------------------------------
 -- 2. PERSONA (Titular del seguimiento: 30 a 65 años)
 -- -----------------------------------------------------------------------------
@@ -41,6 +42,7 @@ CREATE TABLE persona (
     activo           BIT NOT NULL DEFAULT 1
 );
 GO
+
 
 -- -----------------------------------------------------------------------------
 -- 3. CUENTA_ROL (Login único Web/Android y permisos por rol - TRA-02)
@@ -58,6 +60,7 @@ CREATE TABLE cuenta_rol (
     fecha_fin          DATE NULL
 );
 GO
+
 
 -- -----------------------------------------------------------------------------
 -- 4. META_SEMANAL (Metas de actividad y contacto con control de versiones)
@@ -81,6 +84,7 @@ CREATE TABLE meta_semanal (
 );
 GO
 
+
 CREATE UNIQUE INDEX uq_meta_semanal_vigente
     ON meta_semanal (persona_id, habito, inicio_semana)
     WHERE vigente = 1;
@@ -100,6 +104,7 @@ CREATE TABLE sesion_fisica (
 );
 GO
 
+
 -- -----------------------------------------------------------------------------
 -- 6. CONTACTO_SOCIAL (Registro diario de interacciones sociales)
 -- -----------------------------------------------------------------------------
@@ -112,6 +117,7 @@ CREATE TABLE contacto_social (
     estado      VARCHAR(20) NOT NULL DEFAULT 'VALIDO' CHECK (estado IN ('VALIDO', 'ANULADO'))
 );
 GO
+
 
 -- -----------------------------------------------------------------------------
 -- 7. CONFIRMACION_DIARIA (Distingue 0% confirmado vs. Datos pendientes)
@@ -126,6 +132,7 @@ CREATE TABLE confirmacion_diaria (
     CONSTRAINT uq_confirmacion_diaria UNIQUE (persona_id, fecha, habito)
 );
 GO
+
 
 -- -----------------------------------------------------------------------------
 -- 8. CONTROL_PROGRAMADO (Agenda mensual de factores cardiometabólicos)
@@ -145,6 +152,7 @@ CREATE TABLE control_programado (
     CONSTRAINT uq_control_mes UNIQUE (persona_id, tipo_control, mes_periodo)
 );
 GO
+
 
 -- -----------------------------------------------------------------------------
 -- 9. RESULTADO_CONTROL (Mediciones clínicas: con control previsto o sin meta)
@@ -170,6 +178,7 @@ CREATE TABLE resultado_control (
 );
 GO
 
+
 CREATE UNIQUE INDEX uq_resultado_referencia
     ON resultado_control (control_id)
     WHERE es_referencia = 1 AND control_id IS NOT NULL;
@@ -189,6 +198,7 @@ CREATE TABLE regla_alerta (
 );
 GO
 
+
 -- -----------------------------------------------------------------------------
 -- 11. EJECUCION_REGLA (Auditoría de ejecuciones del motor de alertas)
 -- -----------------------------------------------------------------------------
@@ -200,6 +210,7 @@ CREATE TABLE ejecucion_regla (
     alertas_generadas INT NOT NULL DEFAULT 0
 );
 GO
+
 
 -- -----------------------------------------------------------------------------
 -- 12. ALERTA (Bandeja de alertas sin duplicados - ALE-01)
@@ -223,9 +234,11 @@ CREATE TABLE alerta (
 );
 GO
 
+
 CREATE UNIQUE INDEX uq_alerta_unica
     ON alerta (persona_id, regla_id, tipo_seguimiento, control_id_unico, periodo_referencia, destinatario_cuenta_id);
 GO
+
 
 -- -----------------------------------------------------------------------------
 -- 13. EVALUACION_SALUD_CEREBRAL (Puntaje de salud cerebral del tablero)
@@ -243,6 +256,11 @@ CREATE TABLE evaluacion_salud_cerebral (
     version_algoritmo        VARCHAR(20) NOT NULL DEFAULT 'v1.0'
 );
 GO
+
+CREATE UNIQUE INDEX uq_evaluacion_persona_periodo
+    ON evaluacion_salud_cerebral (persona_id, periodo_referencia);
+GO
+
 
 -- -----------------------------------------------------------------------------
 -- 14. SIMULACION_RIESGO (Simulaciones interactivas a 10 y 20 años)
@@ -262,6 +280,7 @@ CREATE TABLE simulacion_riesgo (
 );
 GO
 
+
 -- -----------------------------------------------------------------------------
 -- 15. RECORDATORIO (Avisos configurables y pausables por el usuario)
 -- -----------------------------------------------------------------------------
@@ -278,6 +297,7 @@ CREATE TABLE recordatorio (
 );
 GO
 
+
 -- -----------------------------------------------------------------------------
 -- 16. CATALOGO_LOGRO (Definición de logros de la aplicación)
 -- -----------------------------------------------------------------------------
@@ -290,6 +310,7 @@ CREATE TABLE catalogo_logro (
 );
 GO
 
+
 -- -----------------------------------------------------------------------------
 -- 17. LOGRO_OBTENIDO (Historial de logros: máximo 1 vez por persona y periodo)
 -- -----------------------------------------------------------------------------
@@ -301,4 +322,8 @@ CREATE TABLE logro_obtenido (
     fecha_obtencion    DATETIME2 NOT NULL DEFAULT GETDATE(),
     CONSTRAINT uq_logro_persona_periodo UNIQUE (persona_id, logro_id, periodo_referencia)
 );
+GO
+
+CREATE UNIQUE INDEX uq_evaluacion_persona_periodo
+    ON evaluacion_salud_cerebral (persona_id, periodo_referencia);
 GO
