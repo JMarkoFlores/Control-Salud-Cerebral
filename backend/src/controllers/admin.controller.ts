@@ -286,6 +286,15 @@ export class AdminController {
         persona_titular_id,
         nombre_contacto,
         parentesco,
+        meta_actividad_minutos,
+        meta_social_dias,
+        meta_pa_sistolica,
+        meta_pa_diastolica,
+        meta_glucosa_min,
+        meta_glucosa_max,
+        meta_colesterol_max,
+        meta_imc_min,
+        meta_imc_max,
       } = req.body;
 
       if (!nombres || !apellidos || !fecha_nacimiento || !sexo || !ubicacion_id || !rol) {
@@ -310,6 +319,15 @@ export class AdminController {
         persona_titular_id: persona_titular_id ? parseInt(persona_titular_id, 10) : undefined,
         nombre_contacto,
         parentesco,
+        meta_actividad_minutos: meta_actividad_minutos ? parseInt(meta_actividad_minutos, 10) : undefined,
+        meta_social_dias: meta_social_dias ? parseInt(meta_social_dias, 10) : undefined,
+        meta_pa_sistolica: meta_pa_sistolica ? parseFloat(meta_pa_sistolica) : undefined,
+        meta_pa_diastolica: meta_pa_diastolica ? parseFloat(meta_pa_diastolica) : undefined,
+        meta_glucosa_min: meta_glucosa_min ? parseFloat(meta_glucosa_min) : undefined,
+        meta_glucosa_max: meta_glucosa_max ? parseFloat(meta_glucosa_max) : undefined,
+        meta_colesterol_max: meta_colesterol_max ? parseFloat(meta_colesterol_max) : undefined,
+        meta_imc_min: meta_imc_min ? parseFloat(meta_imc_min) : undefined,
+        meta_imc_max: meta_imc_max ? parseFloat(meta_imc_max) : undefined,
       });
 
       res.status(201).json({
@@ -341,6 +359,15 @@ export class AdminController {
         rol,
         nombre_contacto,
         parentesco,
+        meta_actividad_minutos,
+        meta_social_dias,
+        meta_pa_sistolica,
+        meta_pa_diastolica,
+        meta_glucosa_min,
+        meta_glucosa_max,
+        meta_colesterol_max,
+        meta_imc_min,
+        meta_imc_max,
       } = req.body;
 
       await this.adminRepo.actualizarUsuario({
@@ -357,9 +384,38 @@ export class AdminController {
         rol,
         nombre_contacto,
         parentesco,
+        meta_actividad_minutos: meta_actividad_minutos ? parseInt(meta_actividad_minutos, 10) : undefined,
+        meta_social_dias: meta_social_dias ? parseInt(meta_social_dias, 10) : undefined,
+        meta_pa_sistolica: meta_pa_sistolica ? parseFloat(meta_pa_sistolica) : undefined,
+        meta_pa_diastolica: meta_pa_diastolica ? parseFloat(meta_pa_diastolica) : undefined,
+        meta_glucosa_min: meta_glucosa_min ? parseFloat(meta_glucosa_min) : undefined,
+        meta_glucosa_max: meta_glucosa_max ? parseFloat(meta_glucosa_max) : undefined,
+        meta_colesterol_max: meta_colesterol_max ? parseFloat(meta_colesterol_max) : undefined,
+        meta_imc_min: meta_imc_min ? parseFloat(meta_imc_min) : undefined,
+        meta_imc_max: meta_imc_max ? parseFloat(meta_imc_max) : undefined,
       });
 
       res.json({ success: true, data: { message: 'Usuario actualizado correctamente.' } });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  getMetasTitular = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const personaId = parseInt(req.params.personaId, 10);
+      const metas = await this.adminRepo.getMetasTitular(personaId);
+      res.json({ success: true, data: metas });
+    } catch (error) {
+      next(error);
+    }
+  };
+
+  actualizarMetasTitular = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const personaId = parseInt(req.params.personaId, 10);
+      await this.adminRepo.actualizarMetasTitular(personaId, req.body);
+      res.json({ success: true, data: { message: 'Metas actualizadas correctamente.' } });
     } catch (error) {
       next(error);
     }

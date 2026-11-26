@@ -12,6 +12,8 @@ router.use(requireRole(['ADMIN']));
 router.get('/stats', controller.getStats);
 router.get('/usuarios', controller.getUsuarios);
 router.get('/titulares', controller.getTitulares);
+router.get('/titulares/:personaId/metas', controller.getMetasTitular);
+router.put('/titulares/:personaId/metas', controller.actualizarMetasTitular);
 router.post('/usuarios', controller.crearUsuario);
 router.put('/usuarios/:id', controller.actualizarUsuario);
 router.patch('/usuarios/:id/toggle-activo', controller.toggleActivoUsuario);

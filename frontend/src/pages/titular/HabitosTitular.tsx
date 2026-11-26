@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { SesionFisica, ContactoSocial, PanelDia } from '../../types';
-import { Activity, Users, Plus, CheckCircle2, XCircle, Trash2, Calendar, Target, Clock, AlertCircle } from 'lucide-react';
+import { Activity, Users, Plus, CheckCircle2, XCircle, Trash2, Calendar, Target, Clock, AlertCircle, Lock } from 'lucide-react';
 import { formatDateTimePE, getLocalDatetimeString } from '../../utils/formatters';
 
 export const HabitosTitular: React.FC = () => {
@@ -15,7 +15,6 @@ export const HabitosTitular: React.FC = () => {
   // Modales
   const [showModalFisica, setShowModalFisica] = useState(false);
   const [showModalSocial, setShowModalSocial] = useState(false);
-  const [showModalMeta, setShowModalMeta] = useState(false);
 
   // Forms
   const [formFisica, setFormFisica] = useState({
@@ -29,13 +28,6 @@ export const HabitosTitular: React.FC = () => {
     fecha_hora: getLocalDatetimeString(),
     modalidad: 'Conversación presencial',
     origen: 'Autorreporte',
-  });
-
-  const [formMeta, setFormMeta] = useState({
-    habito: 'ACTIVIDAD_FISICA',
-    valor_meta: 150,
-    unidad: 'MINUTOS',
-    origen_meta: 'PERSONAL',
   });
 
   const fetchData = async () => {
@@ -128,21 +120,6 @@ export const HabitosTitular: React.FC = () => {
       fetchData();
     } catch (err: any) {
       alert(err.response?.data?.error?.message || 'Error al confirmar');
-    }
-  };
-
-  // Guardar Meta
-  const handleGuardarMeta = async (e: React.FormEvent) => {
-    e.preventDefault();
-    try {
-      await api.post('/habitos/metas', {
-        ...formMeta,
-        inicio_semana: metasInfo?.inicioSemana,
-      });
-      setShowModalMeta(false);
-      fetchData();
-    } catch (err: any) {
-      alert(err.response?.data?.error?.message || 'Error al guardar meta');
     }
   };
 
@@ -474,15 +451,10 @@ export const HabitosTitular: React.FC = () => {
                   <p>Versión: <span className="font-semibold text-slate-700">v{metasInfo?.metaFisica?.version_meta || 1}</span></p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  setFormMeta({ habito: 'ACTIVIDAD_FISICA', valor_meta: 180, unidad: 'MINUTOS', origen_meta: 'PERSONAL' });
-                  setShowModalMeta(true);
-                }}
-                className="mt-5 py-2.5 rounded-xl bg-health-petroleo text-white font-bold text-xs hover:bg-teal-900 transition-colors w-full"
-              >
-                Actualizar Meta Física
-              </button>
+              <div className="mt-5 py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 font-medium text-xs flex items-center justify-center gap-1.5 w-full">
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span>Meta clínica fijada por el Especialista (Solo lectura)</span>
+              </div>
             </div>
 
             {/* Meta Contacto Social */}
@@ -501,15 +473,10 @@ export const HabitosTitular: React.FC = () => {
                   <p>Versión: <span className="font-semibold text-slate-700">v{metasInfo?.metaSocial?.version_meta || 1}</span></p>
                 </div>
               </div>
-              <button
-                onClick={() => {
-                  setFormMeta({ habito: 'CONTACTO_SOCIAL', valor_meta: 4, unidad: 'DIAS', origen_meta: 'PERSONAL' });
-                  setShowModalMeta(true);
-                }}
-                className="mt-5 py-2.5 rounded-xl bg-emerald-600 text-white font-bold text-xs hover:bg-emerald-700 transition-colors w-full"
-              >
-                Actualizar Meta Social
-              </button>
+              <div className="mt-5 py-2.5 px-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 font-medium text-xs flex items-center justify-center gap-1.5 w-full">
+                <Lock className="w-3.5 h-3.5 text-slate-400" />
+                <span>Meta clínica fijada por el Especialista (Solo lectura)</span>
+              </div>
             </div>
           </div>
 
@@ -652,72 +619,6 @@ export const HabitosTitular: React.FC = () => {
                   className="flex-1 py-2.5 rounded-xl bg-emerald-600 text-white font-bold hover:bg-emerald-700 transition-colors shadow-md"
                 >
                   Guardar Contacto
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* -------------------------------------------------------------------- */}
-      {/* MODAL ACTUALIZAR META */}
-      {/* -------------------------------------------------------------------- */}
-      {showModalMeta && (
-        <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white rounded-3xl p-6 shadow-modal border border-health-border">
-            <h3 className="text-base font-bold text-slate-800 mb-4">Configurar Meta Semanal</h3>
-            <form onSubmit={handleGuardarMeta} className="space-y-3 text-xs">
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Hábito</label>
-                <input
-                  type="text"
-                  disabled
-                  value={formMeta.habito.replace('_', ' ')}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-100 font-bold text-slate-600"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">
-                  Valor Meta ({formMeta.unidad})
-                </label>
-                <input
-                  type="number"
-                  min="1"
-                  max={formMeta.unidad === 'DIAS' ? 7 : 1200}
-                  required
-                  value={formMeta.valor_meta}
-                  onChange={(e) => setFormMeta({ ...formMeta, valor_meta: parseInt(e.target.value, 10) })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-health-petroleo"
-                />
-              </div>
-
-              <div>
-                <label className="block font-bold text-slate-700 mb-1">Origen de la Meta</label>
-                <select
-                  value={formMeta.origen_meta}
-                  onChange={(e) => setFormMeta({ ...formMeta, origen_meta: e.target.value })}
-                  className="w-full px-3 py-2 rounded-xl border border-slate-200 focus:outline-none focus:border-health-petroleo"
-                >
-                  <option value="PERSONAL">Personal</option>
-                  <option value="ACORDADA">Acordada con Profesional / Acompañante</option>
-                  <option value="PROFESIONAL_SALUD">Prescrita por Médico</option>
-                </select>
-              </div>
-
-              <div className="flex gap-2 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowModalMeta(false)}
-                  className="flex-1 py-2.5 rounded-xl border border-slate-200 font-bold text-slate-600 hover:bg-slate-50 transition-colors"
-                >
-                  Cancelar
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 rounded-xl bg-health-petroleo text-white font-bold hover:bg-teal-900 transition-colors shadow-md"
-                >
-                  Guardar Versión
                 </button>
               </div>
             </form>

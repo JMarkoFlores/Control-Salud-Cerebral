@@ -10,7 +10,7 @@ router.use(authenticateJWT);
 
 // Metas
 router.get('/metas', controller.getMetas);
-router.post('/metas', requireRole(['TITULAR', 'ADMIN']), controller.guardarMeta);
+router.post('/metas', requireRole(['ADMIN']), controller.guardarMeta);
 
 // Sesiones físicas
 router.get('/fisica', controller.getSesionesFisicas);

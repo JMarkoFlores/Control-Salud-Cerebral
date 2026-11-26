@@ -12,6 +12,9 @@ import {
   AlertCircle, 
   User, 
   Key, 
+  Target,
+  HeartPulse,
+  Activity,
 } from 'lucide-react';
 
 interface Ubicacion {
@@ -75,6 +78,16 @@ export const UsuariosAdmin: React.FC = () => {
     ubicacion_id: 1,
     correo_acceso: '',
     password: '',
+    // Metas de hábitos e indicadores cardiometabólicos (valores por defecto)
+    meta_actividad_minutos: 150,
+    meta_social_dias: 3,
+    meta_pa_sistolica: 120,
+    meta_pa_diastolica: 80,
+    meta_glucosa_min: 70,
+    meta_glucosa_max: 100,
+    meta_colesterol_max: 100,
+    meta_imc_min: 18.5,
+    meta_imc_max: 24.9,
   });
 
   // Formulario Editar
@@ -90,6 +103,16 @@ export const UsuariosAdmin: React.FC = () => {
     correo_acceso: '',
     password: '',
     rol: 'TITULAR' as 'TITULAR' | 'ADMIN',
+    // Metas de hábitos e indicadores cardiometabólicos
+    meta_actividad_minutos: 150,
+    meta_social_dias: 3,
+    meta_pa_sistolica: 120,
+    meta_pa_diastolica: 80,
+    meta_glucosa_min: 70,
+    meta_glucosa_max: 100,
+    meta_colesterol_max: 100,
+    meta_imc_min: 18.5,
+    meta_imc_max: 24.9,
   });
 
   const cargarDatos = async () => {
@@ -153,25 +176,58 @@ export const UsuariosAdmin: React.FC = () => {
       ubicacion_id: ubicaciones[0]?.ubicacion_id || 1,
       correo_acceso: '',
       password: '',
+      meta_actividad_minutos: 150,
+      meta_social_dias: 3,
+      meta_pa_sistolica: 120,
+      meta_pa_diastolica: 80,
+      meta_glucosa_min: 70,
+      meta_glucosa_max: 100,
+      meta_colesterol_max: 100,
+      meta_imc_min: 18.5,
+      meta_imc_max: 24.9,
     });
     setShowModalCrear(true);
   };
 
   // Abrir Modal Editar
-  const handleOpenEditar = (u: UsuarioItem) => {
+  const handleOpenEditar = async (u: UsuarioItem) => {
     setUsuarioSeleccionado(u);
+    let metas = {
+      meta_actividad_minutos: 150,
+      meta_social_dias: 3,
+      meta_pa_sistolica: 120,
+      meta_pa_diastolica: 80,
+      meta_glucosa_min: 70,
+      meta_glucosa_max: 100,
+      meta_colesterol_max: 100,
+      meta_imc_min: 18.5,
+      meta_imc_max: 24.9,
+    };
+
+    if (u.rol === 'TITULAR') {
+      try {
+        const res = await api.get(`/admin/titulares/${u.persona_id}/metas`);
+        if (res.data?.success && res.data?.data) {
+          metas = { ...metas, ...res.data.data };
+        }
+      } catch (err) {
+        console.error('Error al cargar metas del titular', err);
+      }
+    }
+
     setFormEditar({
       persona_id: u.persona_id,
       cuenta_id: u.cuenta_id || null,
       nombres: u.nombres || '',
       apellidos: u.apellidos || '',
-      fecha_nacimiento: u.fecha_nacimiento || '1975-01-01',
+      fecha_nacimiento: u.fecha_nacimiento ? u.fecha_nacimiento.substring(0, 10) : '1975-01-01',
       sexo: (u.sexo as 'M' | 'F') || 'M',
       ubicacion_id: u.ubicacion_id || 1,
       activo: u.activo,
       correo_acceso: u.correo_acceso || '',
       password: '',
       rol: (u.rol as 'TITULAR' | 'ADMIN') || 'TITULAR',
+      ...metas,
     });
     setShowModalEditar(true);
   };
@@ -197,7 +253,7 @@ export const UsuariosAdmin: React.FC = () => {
         return;
       }
 
-      const payload = {
+      const payload: any = {
         rol: formCrear.rol,
         nombres: formCrear.nombres.trim(),
         apellidos: formCrear.apellidos.trim(),
@@ -208,9 +264,21 @@ export const UsuariosAdmin: React.FC = () => {
         password: formCrear.password,
       };
 
+      if (formCrear.rol === 'TITULAR') {
+        payload.meta_actividad_minutos = formCrear.meta_actividad_minutos;
+        payload.meta_social_dias = formCrear.meta_social_dias;
+        payload.meta_pa_sistolica = formCrear.meta_pa_sistolica;
+        payload.meta_pa_diastolica = formCrear.meta_pa_diastolica;
+        payload.meta_glucosa_min = formCrear.meta_glucosa_min;
+        payload.meta_glucosa_max = formCrear.meta_glucosa_max;
+        payload.meta_colesterol_max = formCrear.meta_colesterol_max;
+        payload.meta_imc_min = formCrear.meta_imc_min;
+        payload.meta_imc_max = formCrear.meta_imc_max;
+      }
+
       const res = await api.post('/admin/usuarios', payload);
       if (res.data.success) {
-        mostrarMensaje('success', `Usuario ${res.data.data.codigoInterno || ''} creado exitosamente.`);
+        mostrarMensaje('success', `Usuario ${res.data.data.codigoInterno || ''} creado exitosamente con sus metas e indicadores.`);
         setShowModalCrear(false);
         cargarDatos();
       }
@@ -500,7 +568,7 @@ export const UsuariosAdmin: React.FC = () => {
       {/* MODAL CREAR USUARIO / CUENTA */}
       {showModalCrear && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-health-border animate-fade-in max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-health-border animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-health-border pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <Users className="w-5 h-5 text-health-petroleo" />
@@ -649,6 +717,171 @@ export const UsuariosAdmin: React.FC = () => {
                 </div>
               </div>
 
+              {/* Definición de Metas e Indicadores Clínicos para Titulares */}
+              {formCrear.rol === 'TITULAR' && (
+                <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-health-petroleo" />
+                      Metas de Hábitos e Indicadores Cardiometabólicos
+                    </span>
+                    <span className="text-[10px] font-semibold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-100">
+                      Valores por defecto
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    Valores objetivo asignados al paciente. El titular los verá en su plataforma en modo solo lectura para evitar alteraciones no supervisadas.
+                  </p>
+
+                  {/* 1. Hábitos Semanales */}
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block flex items-center gap-1">
+                      <Activity className="w-3 h-3 text-health-petroleo" />
+                      1. Hábitos Semanales de Estilo de Vida
+                    </span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Actividad Física (min/semana)
+                        </label>
+                        <input
+                          type="number"
+                          min="30"
+                          max="1200"
+                          step="10"
+                          value={formCrear.meta_actividad_minutos}
+                          onChange={(e) => setFormCrear({ ...formCrear, meta_actividad_minutos: parseInt(e.target.value, 10) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Contacto Social (días/semana)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="7"
+                          value={formCrear.meta_social_dias}
+                          onChange={(e) => setFormCrear({ ...formCrear, meta_social_dias: parseInt(e.target.value, 10) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Indicadores Cardiometabólicos Mensuales */}
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block flex items-center gap-1">
+                      <HeartPulse className="w-3 h-3 text-health-petroleo" />
+                      2. Metas de Factores Cardiometabólicos
+                    </span>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Presión Sistólica Máx (mmHg)
+                        </label>
+                        <input
+                          type="number"
+                          min="80"
+                          max="200"
+                          value={formCrear.meta_pa_sistolica}
+                          onChange={(e) => setFormCrear({ ...formCrear, meta_pa_sistolica: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Presión Diastólica Máx (mmHg)
+                        </label>
+                        <input
+                          type="number"
+                          min="40"
+                          max="130"
+                          value={formCrear.meta_pa_diastolica}
+                          onChange={(e) => setFormCrear({ ...formCrear, meta_pa_diastolica: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Glucosa Mín (mg/dL)
+                        </label>
+                        <input
+                          type="number"
+                          min="40"
+                          max="200"
+                          value={formCrear.meta_glucosa_min}
+                          onChange={(e) => setFormCrear({ ...formCrear, meta_glucosa_min: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Glucosa Máx (mg/dL)
+                        </label>
+                        <input
+                          type="number"
+                          min="60"
+                          max="300"
+                          value={formCrear.meta_glucosa_max}
+                          onChange={(e) => setFormCrear({ ...formCrear, meta_glucosa_max: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Colesterol LDL Máx (mg/dL)
+                        </label>
+                        <input
+                          type="number"
+                          min="50"
+                          max="300"
+                          value={formCrear.meta_colesterol_max}
+                          onChange={(e) => setFormCrear({ ...formCrear, meta_colesterol_max: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Rango IMC (Mín - Máx)
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="10"
+                            max="50"
+                            value={formCrear.meta_imc_min}
+                            onChange={(e) => setFormCrear({ ...formCrear, meta_imc_min: parseFloat(e.target.value) || 0 })}
+                            className="w-1/2 p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                            title="Mínimo IMC"
+                          />
+                          <span className="text-slate-400 font-bold">-</span>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="10"
+                            max="50"
+                            value={formCrear.meta_imc_max}
+                            onChange={(e) => setFormCrear({ ...formCrear, meta_imc_max: parseFloat(e.target.value) || 0 })}
+                            className="w-1/2 p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                            title="Máximo IMC"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Acciones Modal */}
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-health-border">
                 <button
@@ -674,7 +907,7 @@ export const UsuariosAdmin: React.FC = () => {
       {/* MODAL EDITAR USUARIO */}
       {showModalEditar && usuarioSeleccionado && (
         <div className="fixed inset-0 z-50 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-health-border animate-fade-in max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-health-border animate-fade-in max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between border-b border-health-border pb-3 mb-4">
               <div className="flex items-center gap-2">
                 <Edit2 className="w-5 h-5 text-health-petroleo" />
@@ -795,6 +1028,171 @@ export const UsuariosAdmin: React.FC = () => {
                   />
                 </div>
               </div>
+
+              {/* Modificación de Metas e Indicadores Clínicos para Titulares */}
+              {formEditar.rol === 'TITULAR' && (
+                <div className="pt-3 border-t border-slate-100 space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-bold text-slate-800 flex items-center gap-1.5">
+                      <Target className="w-3.5 h-3.5 text-health-petroleo" />
+                      Modificar Metas e Indicadores Clínicos
+                    </span>
+                    <span className="text-[10px] font-semibold text-purple-700 bg-purple-50 px-2 py-0.5 rounded-full border border-purple-100">
+                      Supervisión Médica
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 leading-tight">
+                    Como administrador, puedes ajustar las metas vigentes de este paciente según su evolución médica.
+                  </p>
+
+                  {/* 1. Hábitos Semanales */}
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block flex items-center gap-1">
+                      <Activity className="w-3 h-3 text-health-petroleo" />
+                      1. Hábitos Semanales de Estilo de Vida
+                    </span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Actividad Física (min/semana)
+                        </label>
+                        <input
+                          type="number"
+                          min="30"
+                          max="1200"
+                          step="10"
+                          value={formEditar.meta_actividad_minutos}
+                          onChange={(e) => setFormEditar({ ...formEditar, meta_actividad_minutos: parseInt(e.target.value, 10) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Contacto Social (días/semana)
+                        </label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="7"
+                          value={formEditar.meta_social_dias}
+                          onChange={(e) => setFormEditar({ ...formEditar, meta_social_dias: parseInt(e.target.value, 10) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 2. Indicadores Cardiometabólicos Mensuales */}
+                  <div className="bg-slate-50 p-3 rounded-2xl border border-slate-100 space-y-2.5">
+                    <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block flex items-center gap-1">
+                      <HeartPulse className="w-3 h-3 text-health-petroleo" />
+                      2. Metas de Factores Cardiometabólicos
+                    </span>
+                    
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Presión Sistólica Máx (mmHg)
+                        </label>
+                        <input
+                          type="number"
+                          min="80"
+                          max="200"
+                          value={formEditar.meta_pa_sistolica}
+                          onChange={(e) => setFormEditar({ ...formEditar, meta_pa_sistolica: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Presión Diastólica Máx (mmHg)
+                        </label>
+                        <input
+                          type="number"
+                          min="40"
+                          max="130"
+                          value={formEditar.meta_pa_diastolica}
+                          onChange={(e) => setFormEditar({ ...formEditar, meta_pa_diastolica: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Glucosa Mín (mg/dL)
+                        </label>
+                        <input
+                          type="number"
+                          min="40"
+                          max="200"
+                          value={formEditar.meta_glucosa_min}
+                          onChange={(e) => setFormEditar({ ...formEditar, meta_glucosa_min: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Glucosa Máx (mg/dL)
+                        </label>
+                        <input
+                          type="number"
+                          min="60"
+                          max="300"
+                          value={formEditar.meta_glucosa_max}
+                          onChange={(e) => setFormEditar({ ...formEditar, meta_glucosa_max: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Colesterol LDL Máx (mg/dL)
+                        </label>
+                        <input
+                          type="number"
+                          min="50"
+                          max="300"
+                          value={formEditar.meta_colesterol_max}
+                          onChange={(e) => setFormEditar({ ...formEditar, meta_colesterol_max: parseFloat(e.target.value) || 0 })}
+                          className="w-full p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 mb-1">
+                          Rango IMC (Mín - Máx)
+                        </label>
+                        <div className="flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="10"
+                            max="50"
+                            value={formEditar.meta_imc_min}
+                            onChange={(e) => setFormEditar({ ...formEditar, meta_imc_min: parseFloat(e.target.value) || 0 })}
+                            className="w-1/2 p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                            title="Mínimo IMC"
+                          />
+                          <span className="text-slate-400 font-bold">-</span>
+                          <input
+                            type="number"
+                            step="0.1"
+                            min="10"
+                            max="50"
+                            value={formEditar.meta_imc_max}
+                            onChange={(e) => setFormEditar({ ...formEditar, meta_imc_max: parseFloat(e.target.value) || 0 })}
+                            className="w-1/2 p-2 rounded-xl border border-slate-200 text-xs focus:outline-none focus:border-health-petroleo bg-white"
+                            title="Máximo IMC"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Acciones */}
               <div className="flex items-center justify-end gap-2 pt-4 border-t border-health-border">

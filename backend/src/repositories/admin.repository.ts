@@ -137,6 +137,15 @@ export class AdminRepository {
     persona_titular_id?: number;
     nombre_contacto?: string;
     parentesco?: string;
+    meta_actividad_minutos?: number;
+    meta_social_dias?: number;
+    meta_pa_sistolica?: number;
+    meta_pa_diastolica?: number;
+    meta_glucosa_min?: number;
+    meta_glucosa_max?: number;
+    meta_colesterol_max?: number;
+    meta_imc_min?: number;
+    meta_imc_max?: number;
   }): Promise<any> {
     const pool = await getPool();
     const transaction = pool.transaction();
@@ -172,32 +181,55 @@ export class AdminRepository {
         const monday = getMondayOfCurrentWeek();
         const mes = getFirstDayOfMonth();
 
+        const valorActividad = data.meta_actividad_minutos ? Number(data.meta_actividad_minutos) : 150;
+        const valorSocial = data.meta_social_dias ? Number(data.meta_social_dias) : 3;
+        const paSistolica = data.meta_pa_sistolica ? Number(data.meta_pa_sistolica) : 120;
+        const paDiastolica = data.meta_pa_diastolica ? Number(data.meta_pa_diastolica) : 80;
+        const glucosaMin = data.meta_glucosa_min ? Number(data.meta_glucosa_min) : 70;
+        const glucosaMax = data.meta_glucosa_max ? Number(data.meta_glucosa_max) : 100;
+        const colestMax = data.meta_colesterol_max ? Number(data.meta_colesterol_max) : 100;
+        const imcMin = data.meta_imc_min ? Number(data.meta_imc_min) : 18.5;
+        const imcMax = data.meta_imc_max ? Number(data.meta_imc_max) : 24.9;
+
         await transaction.request()
           .input('pid', sql.Int, personaId)
           .input('sem', sql.Date, monday)
+          .input('act', sql.Int, valorActividad)
+          .input('soc', sql.Int, valorSocial)
           .query(`
             INSERT INTO meta_semanal (persona_id, habito, inicio_semana, valor_meta, unidad, version_meta, origen_meta, vigente)
-            VALUES (@pid, 'ACTIVIDAD_FISICA', @sem, 150, 'MINUTOS', 1, 'ACORDADA', 1);
+            VALUES (@pid, 'ACTIVIDAD_FISICA', @sem, @act, 'MINUTOS', 1, 'ACORDADA', 1);
 
             INSERT INTO meta_semanal (persona_id, habito, inicio_semana, valor_meta, unidad, version_meta, origen_meta, vigente)
-            VALUES (@pid, 'CONTACTO_SOCIAL', @sem, 3, 'DIAS', 1, 'ACORDADA', 1);
+            VALUES (@pid, 'CONTACTO_SOCIAL', @sem, @soc, 'DIAS', 1, 'ACORDADA', 1);
           `);
 
         await transaction.request()
           .input('pid', sql.Int, personaId)
           .input('mes', sql.Date, mes)
+          .input('pa_sist', sql.Numeric(6, 2), paSistolica)
+          .input('pa_diast', sql.Numeric(6, 2), paDiastolica)
+          .input('pa_txt', sql.VarChar(80), `<= ${paSistolica}/${paDiastolica} mmHg`)
+          .input('glu_min', sql.Numeric(6, 2), glucosaMin)
+          .input('glu_max', sql.Numeric(6, 2), glucosaMax)
+          .input('glu_txt', sql.VarChar(80), `${glucosaMin} - ${glucosaMax} mg/dL`)
+          .input('col_max', sql.Numeric(6, 2), colestMax)
+          .input('col_txt', sql.VarChar(80), `< ${colestMax} mg/dL`)
+          .input('imc_min', sql.Numeric(6, 2), imcMin)
+          .input('imc_max', sql.Numeric(6, 2), imcMax)
+          .input('imc_txt', sql.VarChar(80), `${imcMin} - ${imcMax} kg/m²`)
           .query(`
             INSERT INTO control_programado (persona_id, tipo_control, mes_periodo, fecha_prevista, criterio_meta_texto, valor_meta_max, valor_meta_max_diast, unidad, vigente)
-            VALUES (@pid, 'Presión arterial', @mes, @mes, '<= 120/80 mmHg', 120, 80, 'mmHg', 1);
+            VALUES (@pid, 'Presión arterial', @mes, @mes, @pa_txt, @pa_sist, @pa_diast, 'mmHg', 1);
 
             INSERT INTO control_programado (persona_id, tipo_control, mes_periodo, fecha_prevista, criterio_meta_texto, valor_meta_min, valor_meta_max, unidad, vigente)
-            VALUES (@pid, 'Glucosa', @mes, @mes, '70 - 100 mg/dL', 70, 100, 'mg/dL', 1);
+            VALUES (@pid, 'Glucosa', @mes, @mes, @glu_txt, @glu_min, @glu_max, 'mg/dL', 1);
 
             INSERT INTO control_programado (persona_id, tipo_control, mes_periodo, fecha_prevista, criterio_meta_texto, valor_meta_max, unidad, vigente)
-            VALUES (@pid, 'Colesterol LDL', @mes, @mes, '< 100 mg/dL', 100, 'mg/dL', 1);
+            VALUES (@pid, 'Colesterol LDL', @mes, @mes, @col_txt, @col_max, 'mg/dL', 1);
 
             INSERT INTO control_programado (persona_id, tipo_control, mes_periodo, fecha_prevista, criterio_meta_texto, valor_meta_min, valor_meta_max, unidad, vigente)
-            VALUES (@pid, 'IMC', @mes, @mes, '18.5 - 24.9 kg/m²', 18.5, 24.9, 'kg/m²', 1);
+            VALUES (@pid, 'IMC', @mes, @mes, @imc_txt, @imc_min, @imc_max, 'kg/m²', 1);
           `);
       }
 
@@ -241,6 +273,15 @@ export class AdminRepository {
     rol?: string;
     nombre_contacto?: string;
     parentesco?: string;
+    meta_actividad_minutos?: number;
+    meta_social_dias?: number;
+    meta_pa_sistolica?: number;
+    meta_pa_diastolica?: number;
+    meta_glucosa_min?: number;
+    meta_glucosa_max?: number;
+    meta_colesterol_max?: number;
+    meta_imc_min?: number;
+    meta_imc_max?: number;
   }): Promise<void> {
     const pool = await getPool();
 
@@ -298,6 +339,225 @@ export class AdminRepository {
         .query(`
           INSERT INTO cuenta_rol (persona_titular_id, correo_acceso, password_hash, rol, autorizado)
           VALUES (@pid, @correo, @hash, @rol, 1)
+        `);
+    }
+
+    if (data.meta_actividad_minutos !== undefined ||
+        data.meta_social_dias !== undefined ||
+        data.meta_pa_sistolica !== undefined ||
+        data.meta_glucosa_min !== undefined ||
+        data.meta_colesterol_max !== undefined ||
+        data.meta_imc_min !== undefined) {
+      await this.actualizarMetasTitular(data.persona_id, data);
+    }
+  }
+
+  async getMetasTitular(personaId: number): Promise<any> {
+    const pool = await getPool();
+    const monday = getMondayOfCurrentWeek();
+    const mes = getFirstDayOfMonth();
+
+    // Metas semanales
+    const metasRes = await pool.request()
+      .input('pid', sql.Int, personaId)
+      .query(`
+        SELECT habito, valor_meta, unidad
+        FROM meta_semanal
+        WHERE persona_id = @pid AND vigente = 1
+      `);
+
+    // Controles programados
+    const controlesRes = await pool.request()
+      .input('pid', sql.Int, personaId)
+      .input('mes', sql.Date, mes)
+      .query(`
+        SELECT tipo_control, valor_meta_min, valor_meta_max, valor_meta_max_diast, unidad
+        FROM control_programado
+        WHERE persona_id = @pid AND mes_periodo = @mes AND vigente = 1
+      `);
+
+    let meta_actividad_minutos = 150;
+    let meta_social_dias = 3;
+    for (const m of metasRes.recordset) {
+      if (m.habito === 'ACTIVIDAD_FISICA') meta_actividad_minutos = m.valor_meta;
+      if (m.habito === 'CONTACTO_SOCIAL') meta_social_dias = m.valor_meta;
+    }
+
+    let meta_pa_sistolica = 120;
+    let meta_pa_diastolica = 80;
+    let meta_glucosa_min = 70;
+    let meta_glucosa_max = 100;
+    let meta_colesterol_max = 100;
+    let meta_imc_min = 18.5;
+    let meta_imc_max = 24.9;
+
+    for (const c of controlesRes.recordset) {
+      if (c.tipo_control === 'Presión arterial') {
+        if (c.valor_meta_max) meta_pa_sistolica = Number(c.valor_meta_max);
+        if (c.valor_meta_max_diast) meta_pa_diastolica = Number(c.valor_meta_max_diast);
+      } else if (c.tipo_control === 'Glucosa') {
+        if (c.valor_meta_min) meta_glucosa_min = Number(c.valor_meta_min);
+        if (c.valor_meta_max) meta_glucosa_max = Number(c.valor_meta_max);
+      } else if (c.tipo_control === 'Colesterol LDL') {
+        if (c.valor_meta_max) meta_colesterol_max = Number(c.valor_meta_max);
+      } else if (c.tipo_control === 'IMC') {
+        if (c.valor_meta_min) meta_imc_min = Number(c.valor_meta_min);
+        if (c.valor_meta_max) meta_imc_max = Number(c.valor_meta_max);
+      }
+    }
+
+    return {
+      meta_actividad_minutos,
+      meta_social_dias,
+      meta_pa_sistolica,
+      meta_pa_diastolica,
+      meta_glucosa_min,
+      meta_glucosa_max,
+      meta_colesterol_max,
+      meta_imc_min,
+      meta_imc_max,
+    };
+  }
+
+  async actualizarMetasTitular(personaId: number, metas: {
+    meta_actividad_minutos?: number;
+    meta_social_dias?: number;
+    meta_pa_sistolica?: number;
+    meta_pa_diastolica?: number;
+    meta_glucosa_min?: number;
+    meta_glucosa_max?: number;
+    meta_colesterol_max?: number;
+    meta_imc_min?: number;
+    meta_imc_max?: number;
+  }): Promise<void> {
+    const pool = await getPool();
+    const monday = getMondayOfCurrentWeek();
+    const mes = getFirstDayOfMonth();
+
+    // 1. Meta actividad física
+    if (metas.meta_actividad_minutos !== undefined && metas.meta_actividad_minutos !== null) {
+      const verRes = await pool.request()
+        .input('pid', sql.Int, personaId)
+        .query(`SELECT ISNULL(MAX(version_meta), 0) AS max_v FROM meta_semanal WHERE persona_id = @pid AND habito = 'ACTIVIDAD_FISICA'`);
+      const nextV = (verRes.recordset[0]?.max_v || 0) + 1;
+
+      await pool.request()
+        .input('pid', sql.Int, personaId)
+        .query(`UPDATE meta_semanal SET vigente = 0 WHERE persona_id = @pid AND habito = 'ACTIVIDAD_FISICA' AND vigente = 1`);
+
+      await pool.request()
+        .input('pid', sql.Int, personaId)
+        .input('sem', sql.Date, monday)
+        .input('val', sql.Int, Number(metas.meta_actividad_minutos))
+        .input('v', sql.Int, nextV)
+        .query(`
+          INSERT INTO meta_semanal (persona_id, habito, inicio_semana, valor_meta, unidad, version_meta, origen_meta, vigente)
+          VALUES (@pid, 'ACTIVIDAD_FISICA', @sem, @val, 'MINUTOS', @v, 'PROFESIONAL_SALUD', 1)
+        `);
+    }
+
+    // 2. Meta contacto social
+    if (metas.meta_social_dias !== undefined && metas.meta_social_dias !== null) {
+      const verRes = await pool.request()
+        .input('pid', sql.Int, personaId)
+        .query(`SELECT ISNULL(MAX(version_meta), 0) AS max_v FROM meta_semanal WHERE persona_id = @pid AND habito = 'CONTACTO_SOCIAL'`);
+      const nextV = (verRes.recordset[0]?.max_v || 0) + 1;
+
+      await pool.request()
+        .input('pid', sql.Int, personaId)
+        .query(`UPDATE meta_semanal SET vigente = 0 WHERE persona_id = @pid AND habito = 'CONTACTO_SOCIAL' AND vigente = 1`);
+
+      await pool.request()
+        .input('pid', sql.Int, personaId)
+        .input('sem', sql.Date, monday)
+        .input('val', sql.Int, Number(metas.meta_social_dias))
+        .input('v', sql.Int, nextV)
+        .query(`
+          INSERT INTO meta_semanal (persona_id, habito, inicio_semana, valor_meta, unidad, version_meta, origen_meta, vigente)
+          VALUES (@pid, 'CONTACTO_SOCIAL', @sem, @val, 'DIAS', @v, 'PROFESIONAL_SALUD', 1)
+        `);
+    }
+
+    // 3. Controles cardiometabólicos
+    if (metas.meta_pa_sistolica !== undefined || metas.meta_pa_diastolica !== undefined) {
+      const paSist = Number(metas.meta_pa_sistolica || 120);
+      const paDiast = Number(metas.meta_pa_diastolica || 80);
+      const paTxt = `<= ${paSist}/${paDiast} mmHg`;
+      await pool.request()
+        .input('pid', sql.Int, personaId)
+        .input('mes', sql.Date, mes)
+        .input('sist', sql.Numeric(6, 2), paSist)
+        .input('diast', sql.Numeric(6, 2), paDiast)
+        .input('txt', sql.VarChar(80), paTxt)
+        .query(`
+          IF EXISTS (SELECT 1 FROM control_programado WHERE persona_id = @pid AND tipo_control = 'Presión arterial' AND mes_periodo = @mes)
+            UPDATE control_programado
+            SET valor_meta_max = @sist, valor_meta_max_diast = @diast, criterio_meta_texto = @txt, vigente = 1
+            WHERE persona_id = @pid AND tipo_control = 'Presión arterial' AND mes_periodo = @mes
+          ELSE
+            INSERT INTO control_programado (persona_id, tipo_control, mes_periodo, fecha_prevista, criterio_meta_texto, valor_meta_max, valor_meta_max_diast, unidad, vigente)
+            VALUES (@pid, 'Presión arterial', @mes, @mes, @txt, @sist, @diast, 'mmHg', 1)
+        `);
+    }
+
+    if (metas.meta_glucosa_min !== undefined || metas.meta_glucosa_max !== undefined) {
+      const gMin = Number(metas.meta_glucosa_min || 70);
+      const gMax = Number(metas.meta_glucosa_max || 100);
+      const gTxt = `${gMin} - ${gMax} mg/dL`;
+      await pool.request()
+        .input('pid', sql.Int, personaId)
+        .input('mes', sql.Date, mes)
+        .input('gmin', sql.Numeric(6, 2), gMin)
+        .input('gmax', sql.Numeric(6, 2), gMax)
+        .input('txt', sql.VarChar(80), gTxt)
+        .query(`
+          IF EXISTS (SELECT 1 FROM control_programado WHERE persona_id = @pid AND tipo_control = 'Glucosa' AND mes_periodo = @mes)
+            UPDATE control_programado
+            SET valor_meta_min = @gmin, valor_meta_max = @gmax, criterio_meta_texto = @txt, vigente = 1
+            WHERE persona_id = @pid AND tipo_control = 'Glucosa' AND mes_periodo = @mes
+          ELSE
+            INSERT INTO control_programado (persona_id, tipo_control, mes_periodo, fecha_prevista, criterio_meta_texto, valor_meta_min, valor_meta_max, unidad, vigente)
+            VALUES (@pid, 'Glucosa', @mes, @mes, @txt, @gmin, @gmax, 'mg/dL', 1)
+        `);
+    }
+
+    if (metas.meta_colesterol_max !== undefined) {
+      const cMax = Number(metas.meta_colesterol_max || 100);
+      const cTxt = `< ${cMax} mg/dL`;
+      await pool.request()
+        .input('pid', sql.Int, personaId)
+        .input('mes', sql.Date, mes)
+        .input('cmax', sql.Numeric(6, 2), cMax)
+        .input('txt', sql.VarChar(80), cTxt)
+        .query(`
+          IF EXISTS (SELECT 1 FROM control_programado WHERE persona_id = @pid AND tipo_control = 'Colesterol LDL' AND mes_periodo = @mes)
+            UPDATE control_programado
+            SET valor_meta_max = @cmax, criterio_meta_texto = @txt, vigente = 1
+            WHERE persona_id = @pid AND tipo_control = 'Colesterol LDL' AND mes_periodo = @mes
+          ELSE
+            INSERT INTO control_programado (persona_id, tipo_control, mes_periodo, fecha_prevista, criterio_meta_texto, valor_meta_max, unidad, vigente)
+            VALUES (@pid, 'Colesterol LDL', @mes, @mes, @txt, @cmax, 'mg/dL', 1)
+        `);
+    }
+
+    if (metas.meta_imc_min !== undefined || metas.meta_imc_max !== undefined) {
+      const iMin = Number(metas.meta_imc_min || 18.5);
+      const iMax = Number(metas.meta_imc_max || 24.9);
+      const iTxt = `${iMin} - ${iMax} kg/m²`;
+      await pool.request()
+        .input('pid', sql.Int, personaId)
+        .input('mes', sql.Date, mes)
+        .input('imin', sql.Numeric(6, 2), iMin)
+        .input('imax', sql.Numeric(6, 2), iMax)
+        .input('txt', sql.VarChar(80), iTxt)
+        .query(`
+          IF EXISTS (SELECT 1 FROM control_programado WHERE persona_id = @pid AND tipo_control = 'IMC' AND mes_periodo = @mes)
+            UPDATE control_programado
+            SET valor_meta_min = @imin, valor_meta_max = @imax, criterio_meta_texto = @txt, vigente = 1
+            WHERE persona_id = @pid AND tipo_control = 'IMC' AND mes_periodo = @mes
+          ELSE
+            INSERT INTO control_programado (persona_id, tipo_control, mes_periodo, fecha_prevista, criterio_meta_texto, valor_meta_min, valor_meta_max, unidad, vigente)
+            VALUES (@pid, 'IMC', @mes, @mes, @txt, @imin, @imax, 'kg/m²', 1)
         `);
     }
   }
