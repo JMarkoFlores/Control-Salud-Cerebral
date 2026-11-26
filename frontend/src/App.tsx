@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ReminderProvider } from './context/ReminderContext';
 import { Navbar } from './components/Navbar';
 import { Sidebar } from './components/Sidebar';
 import { ChatbotWidget } from './components/ChatbotWidget';
+import { ReminderAlertModal } from './components/ReminderAlertModal';
 import { Login } from './pages/auth/Login';
 import { Register } from './pages/auth/Register';
 
@@ -57,7 +59,7 @@ const MainLayout: React.FC = () => {
       return <DashboardAdmin onNavigate={(tab) => setCurrentTab(tab)} />;
     }
 
-    // 3. Rol TITULAR
+    // 2. Rol TITULAR
     switch (currentTab) {
       case 'habitos':
         return <HabitosTitular />;
@@ -79,28 +81,34 @@ const MainLayout: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-health-bg flex flex-col">
-      <Navbar
-        onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
-        isMobileOpen={isMobileSidebarOpen}
-      />
-
-      <div className="flex flex-1">
-        <Sidebar
-          currentTab={currentTab}
-          onSelectTab={(tab) => setCurrentTab(tab)}
-          isOpenMobile={isMobileSidebarOpen}
-          onCloseMobile={() => setIsMobileSidebarOpen(false)}
+    <ReminderProvider onNavigateTab={(tab) => setCurrentTab(tab)}>
+      <div className="min-h-screen bg-health-bg flex flex-col">
+        <Navbar
+          onToggleSidebar={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+          isMobileOpen={isMobileSidebarOpen}
+          onNavigateTab={(tab) => setCurrentTab(tab)}
         />
 
-        <main className="flex-1 lg:pl-64 p-4 lg:p-8 max-w-7xl mx-auto w-full transition-all">
-          {renderContent()}
-        </main>
-      </div>
+        <div className="flex flex-1">
+          <Sidebar
+            currentTab={currentTab}
+            onSelectTab={(tab) => setCurrentTab(tab)}
+            isOpenMobile={isMobileSidebarOpen}
+            onCloseMobile={() => setIsMobileSidebarOpen(false)}
+          />
 
-      {/* Widget flotante de solo lectura */}
-      {user.rol === 'TITULAR' && <ChatbotWidget />}
-    </div>
+          <main className="flex-1 lg:pl-64 p-4 lg:p-8 max-w-7xl mx-auto w-full transition-all">
+            {renderContent()}
+          </main>
+        </div>
+
+        {/* Modal de Alerta y Notificación en Tiempo Real de Recordatorios */}
+        <ReminderAlertModal onNavigate={(tab) => setCurrentTab(tab)} />
+
+        {/* Widget flotante de solo lectura */}
+        {user.rol === 'TITULAR' && <ChatbotWidget />}
+      </div>
+    </ReminderProvider>
   );
 };
 

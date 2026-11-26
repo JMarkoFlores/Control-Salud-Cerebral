@@ -1,14 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Bell, User, LogOut, CheckCircle2, ChevronRight, Menu, X, ShieldAlert, Sparkles } from 'lucide-react';
+import { Bell, User, LogOut, CheckCircle2, ChevronRight, Menu, X, ShieldAlert, Sparkles, Clock } from 'lucide-react';
 import api from '../api/client';
 import { Alerta } from '../types';
 import { getAlertaVisualConfig } from '../utils/alertStyles';
 
-export const Navbar: React.FC<{ onToggleSidebar: () => void; isMobileOpen: boolean }> = ({
-  onToggleSidebar,
-  isMobileOpen,
-}) => {
+export const Navbar: React.FC<{
+  onToggleSidebar: () => void;
+  isMobileOpen: boolean;
+  onNavigateTab?: (tab: string) => void;
+}> = ({ onToggleSidebar, isMobileOpen, onNavigateTab }) => {
   const { user, logout } = useAuth();
   const [alertas, setAlertas] = useState<Alerta[]>([]);
   const [showAlertMenu, setShowAlertMenu] = useState(false);
@@ -134,6 +135,31 @@ export const Navbar: React.FC<{ onToggleSidebar: () => void; isMobileOpen: boole
                   })
                 )}
               </div>
+
+              {onNavigateTab && (
+                <div className="pt-3 mt-2 border-t border-slate-100 flex items-center justify-between text-xs">
+                  <button
+                    onClick={() => {
+                      onNavigateTab('alertas');
+                      setShowAlertMenu(false);
+                    }}
+                    className="font-bold text-health-petroleo hover:underline flex items-center gap-1"
+                  >
+                    <span>Ver todas las alertas</span>
+                    <ChevronRight className="w-3.5 h-3.5" />
+                  </button>
+                  <button
+                    onClick={() => {
+                      onNavigateTab('recordatorios');
+                      setShowAlertMenu(false);
+                    }}
+                    className="font-bold text-teal-700 hover:underline flex items-center gap-1"
+                  >
+                    <Clock className="w-3 h-3" />
+                    <span>Ver recordatorios</span>
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -145,9 +171,11 @@ export const Navbar: React.FC<{ onToggleSidebar: () => void; isMobileOpen: boole
               {user?.nombres} {user?.apellidos}
             </p>
             <div className="flex items-center justify-end gap-1.5 mt-0.5">
-              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
-                user?.rol === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
-              }`}>
+              <span
+                className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider ${
+                  user?.rol === 'ADMIN' ? 'bg-purple-100 text-purple-700' : 'bg-emerald-100 text-emerald-700'
+                }`}
+              >
                 {user?.rol}
               </span>
               <span className="text-[10px] font-mono text-slate-400">
@@ -158,10 +186,10 @@ export const Navbar: React.FC<{ onToggleSidebar: () => void; isMobileOpen: boole
 
           <button
             onClick={logout}
-            className="p-2 rounded-xl text-slate-500 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-            title="Cerrar sesión"
+            className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
+            title="Cerrar Sesión"
           >
-            <LogOut className="w-5 h-5" />
+            <LogOut className="w-4 h-4" />
           </button>
         </div>
       </div>
