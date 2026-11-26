@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { Bell, User, LogOut, CheckCircle2, ChevronRight, Menu, X, ShieldAlert, Sparkles } from 'lucide-react';
 import api from '../api/client';
 import { Alerta } from '../types';
+import { getAlertaVisualConfig } from '../utils/alertStyles';
 
 export const Navbar: React.FC<{ onToggleSidebar: () => void; isMobileOpen: boolean }> = ({
   onToggleSidebar,
@@ -90,37 +91,47 @@ export const Navbar: React.FC<{ onToggleSidebar: () => void; isMobileOpen: boole
                 </span>
               </div>
 
-              <div className="max-h-72 overflow-y-auto divide-y divide-slate-50 mt-2">
+              <div className="max-h-80 overflow-y-auto mt-2 space-y-2 pr-1">
                 {alertas.length === 0 ? (
                   <div className="py-8 text-center text-slate-400 text-xs">
                     <CheckCircle2 className="w-8 h-8 mx-auto mb-2 text-emerald-500 opacity-60" />
                     ¡Excelente! No tienes avisos ni alertas pendientes por atender.
                   </div>
                 ) : (
-                  alertas.map((a) => (
-                    <div key={a.alerta_id} className="py-3 px-1 hover:bg-slate-50/60 transition-colors">
-                      <div className="flex items-start justify-between gap-2">
-                        <span className="text-xs font-bold text-health-petroleo bg-teal-50 px-2 py-0.5 rounded-md">
-                          {a.motivo}
-                        </span>
-                        <span className="text-[10px] text-slate-400">
-                          {new Date(a.fecha_emision).toLocaleDateString('es-PE')}
-                        </span>
+                  alertas.map((a) => {
+                    const cfg = getAlertaVisualConfig(a);
+                    const IconComponent = cfg.Icon;
+                    return (
+                      <div
+                        key={a.alerta_id}
+                        className={`p-3 rounded-xl border transition-all shadow-xs ${cfg.cardClass} ${cfg.borderAccentClass}`}
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex items-center gap-1.5">
+                            <IconComponent className={`w-3.5 h-3.5 shrink-0 ${cfg.iconColorClass}`} />
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.badgeClass}`}>
+                              {cfg.etiqueta}
+                            </span>
+                          </div>
+                          <span className="text-[10px] text-slate-400 font-mono">
+                            {new Date(a.fecha_emision).toLocaleDateString('es-PE')}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-700 mt-1.5 leading-relaxed font-medium">
+                          {a.mensaje || a.nombre_regla}
+                        </p>
+                        <div className="mt-2.5 flex items-center justify-end gap-2 pt-1 border-t border-slate-100/60">
+                          <button
+                            onClick={() => atenderAlerta(a.alerta_id)}
+                            className="text-[11px] font-bold text-slate-600 hover:text-slate-900 hover:underline flex items-center gap-1"
+                          >
+                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600" />
+                            <span>Marcar como leído</span>
+                          </button>
+                        </div>
                       </div>
-                      <p className="text-xs text-slate-700 mt-1.5 leading-relaxed font-medium">
-                        {a.mensaje || a.nombre_regla}
-                      </p>
-                      <div className="mt-2.5 flex items-center justify-end gap-2">
-                        <button
-                          onClick={() => atenderAlerta(a.alerta_id)}
-                          className="text-[11px] font-semibold text-emerald-600 hover:text-emerald-700 hover:underline flex items-center gap-1"
-                        >
-                          <CheckCircle2 className="w-3.5 h-3.5" />
-                          Marcar como leído
-                        </button>
-                      </div>
-                    </div>
-                  ))
+                    );
+                  })
                 )}
               </div>
             </div>

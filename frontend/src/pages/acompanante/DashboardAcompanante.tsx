@@ -3,6 +3,7 @@ import api from '../../api/client';
 import { GaugeChart } from '../../components/GaugeChart';
 import { KpiCard } from '../../components/KpiCard';
 import { Shield, Eye, Bell, CheckCircle2, User } from 'lucide-react';
+import { getAlertaVisualConfig } from '../../utils/alertStyles';
 
 export const DashboardAcompanante: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate }) => {
   const [data, setData] = useState<any>(null);
@@ -105,22 +106,24 @@ export const DashboardAcompanante: React.FC<{ onNavigate?: (tab: string) => void
               No hay alertas pendientes para tu titular en este momento.
             </p>
           ) : (
-            data.alertasTitular.map((a: any) => (
-              <div key={a.alerta_id} className="py-3 flex items-start justify-between gap-3">
-                <div>
-                  <span className="font-bold text-health-petroleo">{a.motivo}</span>
-                  <p className="text-slate-600 mt-0.5">{a.mensaje || a.nombre_regla}</p>
-                  <span className="text-[10px] text-slate-400 block mt-1">
-                    {new Date(a.fecha_emision).toLocaleString('es-PE')}
-                  </span>
+            data.alertasTitular.map((a: any) => {
+              const cfg = getAlertaVisualConfig(a);
+              const IconComponent = cfg.Icon;
+              return (
+                <div key={a.alerta_id} className={`p-3 rounded-xl border mb-2 ${cfg.cardClass} ${cfg.borderAccentClass}`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-1.5">
+                      <IconComponent className={`w-3.5 h-3.5 shrink-0 ${cfg.iconColorClass}`} />
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${cfg.badgeClass}`}>{cfg.etiqueta}</span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-mono">
+                      {new Date(a.fecha_emision).toLocaleDateString('es-PE')}
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-700 mt-1">{a.mensaje || a.nombre_regla}</p>
                 </div>
-                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full shrink-0 ${
-                  a.estado === 'PENDIENTE' ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-700'
-                }`}>
-                  {a.estado}
-                </span>
-              </div>
-            ))
+              );
+            })
           )}
         </div>
       </div>

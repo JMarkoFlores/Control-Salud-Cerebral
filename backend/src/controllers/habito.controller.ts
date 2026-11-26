@@ -1,11 +1,13 @@
 import { Request, Response, NextFunction } from 'express';
 import { HabitoRepository } from '../repositories/habito.repository';
 import { EvaluacionService } from '../services/evaluacion.service';
+import { AlertaService } from '../services/alerta.service';
 import { getMondayOfCurrentWeek, getSundayOfCurrentWeek, getDaysOfWeek, formatDateYMD } from '../utils/dateUtils';
 
 export class HabitoController {
   private habitoRepo = new HabitoRepository();
   private evalService = new EvaluacionService();
+  private alertaService = new AlertaService();
 
   // ---------------------------------------------------------------------------
   // METAS
@@ -109,6 +111,15 @@ export class HabitoController {
         estado_confirmacion: 'CONFIRMADO_CON_REGISTRO',
       });
 
+      // Alerta motivacional inmediata
+      await this.alertaService.generarAlertaMotivacionActividad(
+        personaId,
+        req.user!.cuenta_id,
+        parseInt(duracion_minutos, 10),
+        tipo_actividad,
+        sesionId
+      );
+
       // Recalcular y evaluar logros inmediatamente
       await this.evalService.recalcularSaludCerebral(personaId);
 
@@ -182,6 +193,14 @@ export class HabitoController {
         habito: 'CONTACTO_SOCIAL',
         estado_confirmacion: 'CONFIRMADO_CON_REGISTRO',
       });
+
+      // Alerta motivacional inmediata
+      await this.alertaService.generarAlertaMotivacionSocial(
+        personaId,
+        req.user!.cuenta_id,
+        modalidad,
+        contactoId
+      );
 
       // Recalcular
       await this.evalService.recalcularSaludCerebral(personaId);

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { Alerta } from '../../types';
 import { Bell, CheckCircle2, ShieldAlert, ArrowRight, Filter } from 'lucide-react';
+import { getAlertaVisualConfig } from '../../utils/alertStyles';
 
 export const AlertasTitular: React.FC<{ onNavigate?: (tab: string) => void }> = ({ onNavigate }) => {
   const [alertas, setAlertas] = useState<Alerta[]>([]);
@@ -87,41 +88,37 @@ export const AlertasTitular: React.FC<{ onNavigate?: (tab: string) => void }> = 
         ) : (
           alertas.map((a) => {
             const isPendiente = a.estado === 'PENDIENTE';
+            const cfg = getAlertaVisualConfig(a);
+            const IconComponent = cfg.Icon;
             return (
               <div
                 key={a.alerta_id}
-                className={`bg-white rounded-2xl border p-5 shadow-card transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
-                  isPendiente ? 'border-amber-200 bg-amber-50/20' : 'border-slate-200 opacity-80'
+                className={`rounded-2xl border p-5 shadow-card transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 ${
+                  isPendiente
+                    ? `${cfg.cardClass} ${cfg.borderAccentClass}`
+                    : 'bg-white border-slate-200 opacity-60'
                 }`}
               >
                 <div className="flex items-start gap-3.5">
-                  <div
-                    className={`w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 ${
-                      a.motivo === 'Motivación diaria'
-                        ? 'bg-teal-100 text-health-petroleo'
-                        : isPendiente
-                        ? 'bg-amber-100 text-amber-700'
-                        : 'bg-slate-100 text-slate-500'
-                    }`}
-                  >
-                    <Bell className="w-5 h-5" />
+                  <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 shadow-xs ${cfg.iconBgClass}`}>
+                    <IconComponent className="w-5 h-5" />
                   </div>
 
                   <div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-extrabold text-health-petroleo">
-                        {a.motivo}
+                      <span className={`text-xs font-extrabold px-2.5 py-0.5 rounded-full ${cfg.badgeClass}`}>
+                        {cfg.etiqueta}
                       </span>
                       <span className="text-[10px] text-slate-400 font-mono">
                         {new Date(a.fecha_emision).toLocaleString('es-PE')}
                       </span>
                     </div>
 
-                    <p className="text-xs font-medium text-slate-700 mt-1 leading-relaxed max-w-2xl">
+                    <p className="text-xs font-semibold text-slate-800 mt-1 leading-relaxed max-w-2xl">
                       {a.mensaje || a.nombre_regla}
                     </p>
 
-                    <span className="text-[10px] text-slate-400 block mt-1.5">
+                    <span className="text-[10px] text-slate-500 block mt-1.5 font-medium">
                       Regla: {a.nombre_regla} • Seguimiento: {a.tipo_seguimiento.replace('_', ' ')}
                     </span>
                   </div>
@@ -130,10 +127,10 @@ export const AlertasTitular: React.FC<{ onNavigate?: (tab: string) => void }> = 
                 <div className="flex items-center gap-2 w-full sm:w-auto justify-end pt-3 sm:pt-0 border-t sm:border-t-0 border-slate-100">
                   {onNavigate && (
                     <button
-                      onClick={() => onNavigate('habitos')}
+                      onClick={() => onNavigate(a.tipo_seguimiento === 'CONTROL_CARDIOMETABOLICO' ? 'controles' : 'habitos')}
                       className="px-3 py-1.5 rounded-xl border border-health-petroleo text-health-petroleo text-xs font-bold hover:bg-teal-50 transition-colors flex items-center gap-1"
                     >
-                      <span>Ir al hábito</span>
+                      <span>{a.tipo_seguimiento === 'CONTROL_CARDIOMETABOLICO' ? 'Ir a controles' : 'Ir al hábito'}</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   )}
