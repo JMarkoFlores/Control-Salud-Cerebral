@@ -71,18 +71,6 @@ export const Login: React.FC<{ onNavigateRegister: () => void }> = ({ onNavigate
 
               <button
                 type="button"
-                onClick={() => handleDemoLogin('ana.salazar@gmail.com', 'Acompanante123!')}
-                className="w-full text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-xs flex items-center justify-between group"
-              >
-                <div>
-                  <span className="font-bold text-white block">Acompañante: Ana Salazar</span>
-                  <span className="text-[10px] text-teal-200">ana.salazar@gmail.com</span>
-                </div>
-                <ArrowRight className="w-4 h-4 text-emerald-300 group-hover:translate-x-1 transition-transform" />
-              </button>
-
-              <button
-                type="button"
                 onClick={() => handleDemoLogin('admin@saludcerebral.pe', 'Admin123!')}
                 className="w-full text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-xs flex items-center justify-between group"
               >

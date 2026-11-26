@@ -9,6 +9,7 @@ const controller = new AuthController();
 router.post('/login', controller.login);
 router.post('/registro', controller.registro);
 router.get('/me', authenticateJWT, controller.me);
+router.put('/cambiar-password', authenticateJWT, controller.cambiarPassword);
 
 // Gestión de acompañantes autorizados por el titular
 router.get('/acompanantes', authenticateJWT, requireRole(['TITULAR']), controller.getAcompanantes);

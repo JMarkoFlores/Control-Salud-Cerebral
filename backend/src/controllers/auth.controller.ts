@@ -199,4 +199,70 @@ export class AuthController {
       error: { message: 'El rol ACOMPAÑANTE ha sido discontinuado del sistema.' },
     });
   };
+
+  cambiarPassword = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!req.user) {
+        res.status(401).json({
+          success: false,
+          error: { code: 'UNAUTHORIZED', message: 'No autenticado.' },
+        });
+        return;
+      }
+
+      const { passwordActual, passwordNueva } = req.body;
+
+      if (!passwordActual || !passwordNueva) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'MISSING_FIELDS', message: 'Debes ingresar tu contraseña actual y la nueva contraseña.' },
+        });
+        return;
+      }
+
+      if (passwordNueva.length < 6) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'PASSWORD_TOO_SHORT', message: 'La nueva contraseña debe tener al menos 6 caracteres.' },
+        });
+        return;
+      }
+
+      const account = await this.authRepo.findById(req.user.cuenta_id);
+      if (!account) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'USER_NOT_FOUND', message: 'Usuario no encontrado.' },
+        });
+        return;
+      }
+
+      const passwordMatch = await bcrypt.compare(passwordActual, account.password_hash);
+      if (!passwordMatch) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_CURRENT_PASSWORD', message: 'La contraseña actual ingresada es incorrecta.' },
+        });
+        return;
+      }
+
+      if (passwordActual === passwordNueva) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'SAME_PASSWORD', message: 'La nueva contraseña no puede ser idéntica a la anterior.' },
+        });
+        return;
+      }
+
+      const passwordHash = await bcrypt.hash(passwordNueva, 10);
+      await this.authRepo.updatePassword(req.user.cuenta_id, passwordHash);
+
+      res.json({
+        success: true,
+        data: { message: 'Tu contraseña ha sido actualizada exitosamente.' },
+      });
+    } catch (error) {
+      next(error);
+    }
+  };
 }

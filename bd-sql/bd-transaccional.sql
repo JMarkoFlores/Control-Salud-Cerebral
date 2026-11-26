@@ -324,6 +324,6 @@ CREATE TABLE logro_obtenido (
 );
 GO
 
-CREATE UNIQUE INDEX uq_evaluacion_persona_periodo
-    ON evaluacion_salud_cerebral (persona_id, periodo_referencia);
-GO
+--CREATE UNIQUE INDEX uq_evaluacion_persona_periodo
+--    ON evaluacion_salud_cerebral (persona_id, periodo_referencia);
+--GO

@@ -166,4 +166,17 @@ export class AuthRepository {
       `);
     return res.rowsAffected[0] > 0;
   }
+
+  async updatePassword(cuentaId: number, passwordHash: string): Promise<boolean> {
+    const pool = await getPool();
+    const res = await pool.request()
+      .input('cuenta_id', sql.Int, cuentaId)
+      .input('password_hash', sql.VarChar(255), passwordHash)
+      .query(`
+        UPDATE cuenta_rol
+        SET password_hash = @password_hash
+        WHERE cuenta_id = @cuenta_id
+      `);
+    return (res.rowsAffected[0] || 0) > 0;
+  }
 }
