@@ -655,6 +655,8 @@ export class AdminRepository {
         AND s.fecha_hora >= CAST(m.inicio_semana AS DATETIME2)
         AND s.fecha_hora <= DATEADD(second, -1, CAST(DATEADD(day, 7, m.inicio_semana) AS DATETIME2))
       WHERE p.activo = 1 AND p.codigo_interno <> 'P-000'
+        AND p.fecha_nacimiento <= DATEADD(YEAR, -30, CAST(GETDATE() AS DATE))
+        AND p.fecha_nacimiento > DATEADD(YEAR, -66, CAST(GETDATE() AS DATE))
     `;
 
     if (inicioSemana) {
@@ -700,6 +702,8 @@ export class AdminRepository {
         AND c.fecha_hora >= CAST(m.inicio_semana AS DATETIME2)
         AND c.fecha_hora <= DATEADD(second, -1, CAST(DATEADD(day, 7, m.inicio_semana) AS DATETIME2))
       WHERE p.activo = 1 AND p.codigo_interno <> 'P-000'
+        AND p.fecha_nacimiento <= DATEADD(YEAR, -30, CAST(GETDATE() AS DATE))
+        AND p.fecha_nacimiento > DATEADD(YEAR, -66, CAST(GETDATE() AS DATE))
     `;
 
     if (inicioSemana) {
@@ -735,6 +739,8 @@ export class AdminRepository {
       INNER JOIN control_programado c ON p.persona_id = c.persona_id AND c.vigente = 1
       LEFT JOIN resultado_control r ON c.control_id = r.control_id AND r.es_referencia = 1
       WHERE p.activo = 1 AND p.codigo_interno <> 'P-000'
+        AND p.fecha_nacimiento <= DATEADD(YEAR, -30, CAST(GETDATE() AS DATE))
+        AND p.fecha_nacimiento > DATEADD(YEAR, -66, CAST(GETDATE() AS DATE))
     `;
 
     if (mesPeriodo) {

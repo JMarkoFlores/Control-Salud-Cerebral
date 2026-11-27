@@ -89,27 +89,37 @@ SELECT N'FACT_HABITOS_SEMANALES', COUNT(*) FROM [prevencion_cognitiva_mart].[dbo
 SELECT N'FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES', COUNT(*) FROM [prevencion_cognitiva_mart].[dbo].[FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES];
 
 -- 2. Conciliación de medidas aditivas (M1, M2, M3, M4, M6).
+-- Sólo compara personas de 30-65 años, que son las que entran a los hechos.
 -- Ejecutar justo después del ETL y sin escrituras concurrentes del aplicativo.
 -- M5 exige resultado de referencia válido y coherencia con criterios individuales;
 -- se verifica por control y estado en las consultas posteriores.
 ;WITH ol AS (
-    SELECT N'M1' AS medida, ISNULL(SUM(CONVERT(BIGINT, duracion_minutos)), 0) AS total
-    FROM [dbo].[sesion_fisica]
-    WHERE estado = 'VALIDO' AND fecha_hora < @dia_siguiente
+    SELECT N'M1' AS medida, ISNULL(SUM(CONVERT(BIGINT, s.duracion_minutos)), 0) AS total
+    FROM [dbo].[sesion_fisica] s
+    JOIN [dbo].[v_PersonasETL] p ON p.id_persona = s.persona_id
+    WHERE s.estado = 'VALIDO' AND s.fecha_hora < @dia_siguiente AND p.en_rango = 1
     UNION ALL
-    SELECT N'M2', ISNULL(SUM(CONVERT(BIGINT, valor_meta)), 0)
-    FROM [dbo].[meta_semanal] WHERE vigente = 1 AND habito = 'ACTIVIDAD_FISICA' AND inicio_semana <= @corte
+    SELECT N'M2', ISNULL(SUM(CONVERT(BIGINT, m.valor_meta)), 0)
+    FROM [dbo].[meta_semanal] m
+    JOIN [dbo].[v_PersonasETL] p ON p.id_persona = m.persona_id
+    WHERE m.vigente = 1 AND m.habito = 'ACTIVIDAD_FISICA' AND m.inicio_semana <= @corte AND p.en_rango = 1
     UNION ALL
     SELECT N'M3', COUNT(*) FROM (
-        SELECT DISTINCT persona_id, CONVERT(DATE, fecha_hora) AS fecha
-        FROM [dbo].[contacto_social]
-        WHERE estado = 'VALIDO' AND fecha_hora < @dia_siguiente
+        SELECT DISTINCT c.persona_id, CONVERT(DATE, c.fecha_hora) AS fecha
+        FROM [dbo].[contacto_social] c
+        JOIN [dbo].[v_PersonasETL] p ON p.id_persona = c.persona_id
+        WHERE c.estado = 'VALIDO' AND c.fecha_hora < @dia_siguiente AND p.en_rango = 1
     ) AS dias
     UNION ALL
-    SELECT N'M4', ISNULL(SUM(CONVERT(BIGINT, valor_meta)), 0)
-    FROM [dbo].[meta_semanal] WHERE vigente = 1 AND habito = 'CONTACTO_SOCIAL' AND inicio_semana <= @corte
+    SELECT N'M4', ISNULL(SUM(CONVERT(BIGINT, m.valor_meta)), 0)
+    FROM [dbo].[meta_semanal] m
+    JOIN [dbo].[v_PersonasETL] p ON p.id_persona = m.persona_id
+    WHERE m.vigente = 1 AND m.habito = 'CONTACTO_SOCIAL' AND m.inicio_semana <= @corte AND p.en_rango = 1
     UNION ALL
-    SELECT N'M6', COUNT(*) FROM [dbo].[v_DatosControlProgramado] WHERE tiene_meta_prevista = 1 AND mes_periodo <= @corte
+    SELECT N'M6', COUNT(*)
+    FROM [dbo].[v_DatosControlProgramado] c
+    JOIN [dbo].[v_PersonasETL] p ON p.id_persona = c.persona_id
+    WHERE c.tiene_meta_prevista = 1 AND c.mes_periodo <= @corte AND p.en_rango = 1
 ), mart AS (
     SELECT N'M1' AS medida, ISNULL(SUM(minutos_realizados), 0) AS total FROM [prevencion_cognitiva_mart].[dbo].[FACT_HABITOS_SEMANALES]
     UNION ALL SELECT N'M2', ISNULL(SUM(CONVERT(BIGINT, meta_minutos_semanal)), 0) FROM [prevencion_cognitiva_mart].[dbo].[FACT_HABITOS_SEMANALES]

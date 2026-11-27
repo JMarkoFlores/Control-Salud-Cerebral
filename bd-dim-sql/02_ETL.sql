@@ -199,10 +199,19 @@ FROM [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO];
 GO
 
 -- Resolver la KEY de persona y ubicación a partir de los IDs del OLTP.
+-- en_rango deja fuera de los hechos a quien está fuera de 30-65 al corte
+-- y a las cuentas administrativas, que no son participantes del piloto.
 CREATE OR ALTER VIEW [dbo].[v_PersonasETL]
 AS
 SELECT p.id_persona, p.key_persona, u.key_ubicacion,
-       inicio.inicio_seguimiento, corte.fecha_corte
+       inicio.inicio_seguimiento, corte.fecha_corte,
+       CONVERT(BIT, CASE
+           WHEN p.grupo_edad <> N'FUERA_RANGO'
+            AND NOT EXISTS (
+                SELECT 1 FROM [dbo].[cuenta_rol] AS c
+                WHERE c.persona_titular_id = p.id_persona AND c.rol = 'ADMIN'
+            )
+           THEN 1 ELSE 0 END) AS en_rango
 FROM [dbo].[v_DatosDimPersona] AS origen
 INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_PERSONA] AS p
     ON p.id_persona = origen.id_persona
@@ -252,6 +261,7 @@ WITH HabitosDiarios AS (
        AND c.fecha = dia.id_tiempo
        AND c.habito = s.id_tipo_seguimiento COLLATE DATABASE_DEFAULT
     WHERE s.periodicidad = N'SEMANAL'
+      AND p.en_rango = 1
 ), HabitosAgrupados AS (
     -- Primero sumar los registros diarios; después unir la meta una sola vez.
     SELECT id_persona, key_persona, key_ubicacion, key_tiempo, inicio_semana,
@@ -339,6 +349,7 @@ WITH ControlesBase AS (
                      resultado.resultado_id DESC
         )
     WHERE s.periodicidad = N'MENSUAL'
+      AND p.en_rango = 1
 ), Comparacion AS (
     -- Comparar sólo con los límites individuales registrados en el OLTP.
     SELECT b.*,
@@ -683,6 +694,7 @@ FROM (
     FROM [dbo].[v_PersonasETL] AS p
     INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS t
         ON t.id_tiempo BETWEEN p.inicio_seguimiento AND p.fecha_corte
+    WHERE p.en_rango = 1
 ) AS semanas;
 
 SELECT @controles_esperados = COUNT_BIG(*) * 4
@@ -691,6 +703,7 @@ FROM (
     FROM [dbo].[v_PersonasETL] AS p
     INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS t
         ON t.id_tiempo BETWEEN p.inicio_seguimiento AND p.fecha_corte
+    WHERE p.en_rango = 1
 ) AS meses;
 
 -- Una transacción protege ambos DELETE + INSERT. Si falla una carga,
