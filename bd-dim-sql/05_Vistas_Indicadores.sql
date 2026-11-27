@@ -1,7 +1,7 @@
 -- G1 | PASO 05. VISTAS PARA LOS INDICADORES
 -- Se calculan CAF, CCS y FCM a partir de M1-M6 del Data Mart.
 -- No se guardan porcentajes en los hechos ni se suman porcentajes de personas.
--- Las vistas no muestran nombres, correos ni credenciales.
+-- Las vistas utilizan key_persona como identificador analítico; no exponen nombres ni credenciales.
 
 USE [prevencion_cognitiva_mart];
 GO
@@ -10,12 +10,12 @@ GO
 CREATE OR ALTER VIEW [bi].[v_IndicadoresSemanales]
 AS
 WITH Datos AS (
-    SELECT p.key_persona, p.codigo_interno, p.sexo, p.estado AS estado_persona,
+    SELECT p.key_persona, p.sexo, p.estado AS estado_persona,
            p.fecha_nacimiento,
            u.key_ubicacion, u.pais, u.departamento, u.provincia, u.ciudad, u.distrito,
            t.id_tiempo AS periodo,
            DATEADD(DAY, 6, t.id_tiempo) AS fin_periodo,
-           t.anio_semana_iso, t.semana_iso,
+           t.anio, t.semana,
            CASE
                WHEN DATEADD(DAY, 6, t.id_tiempo) < f.fecha_corte
                THEN DATEADD(DAY, 6, t.id_tiempo)
@@ -58,9 +58,9 @@ WITH Datos AS (
            END AS porcentaje_calculado
     FROM Datos AS d
 )
-SELECT c.key_persona, c.codigo_interno, c.sexo, c.estado_persona,
+SELECT c.key_persona, c.sexo, c.estado_persona,
        c.key_ubicacion, c.pais, c.departamento, c.provincia, c.ciudad, c.distrito,
-       c.periodo, c.fin_periodo, c.anio_semana_iso, c.semana_iso, c.edad,
+       c.periodo, c.fin_periodo, c.anio, c.semana, c.edad,
        CASE
            WHEN c.edad BETWEEN 30 AND 39 THEN N'30-39'
            WHEN c.edad BETWEEN 40 AND 49 THEN N'40-49'
@@ -99,18 +99,18 @@ GO
 CREATE OR ALTER VIEW [bi].[v_ControlesDetalle]
 AS
 WITH Datos AS (
-    SELECT p.key_persona, p.codigo_interno, p.sexo, p.estado AS estado_persona,
+    SELECT p.key_persona, p.sexo, p.estado AS estado_persona,
            p.fecha_nacimiento,
            u.key_ubicacion, u.pais, u.departamento, u.provincia, u.ciudad, u.distrito,
            t.id_tiempo AS periodo, EOMONTH(t.id_tiempo) AS fin_periodo,
-           t.anio, t.trimestre, t.mes, t.nombre_mes,
+           t.anio, t.trimestre, t.mes,
            CASE
                WHEN EOMONTH(t.id_tiempo) < f.fecha_corte THEN EOMONTH(t.id_tiempo)
                ELSE f.fecha_corte
            END AS fecha_edad,
            s.id_tipo_seguimiento, s.tipo_control,
            o.origen_resultado, o.estado_validacion, o.resultado_referencia,
-           m.id_meta, m.criterio_meta, m.unidad, m.fecha_prevista,
+           m.id_meta, m.criterio_meta, m.unidad,
            f.factores_dentro_meta, f.factores_previstos, f.estado_datos, f.fecha_corte
     FROM [prevencion_cognitiva_mart].[dbo].[FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES] AS f
     INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_PERSONA] AS p
@@ -135,9 +135,9 @@ WITH Datos AS (
              END AS edad
     FROM Datos AS d
 )
-SELECT c.key_persona, c.codigo_interno, c.sexo, c.estado_persona,
+SELECT c.key_persona, c.sexo, c.estado_persona,
        c.key_ubicacion, c.pais, c.departamento, c.provincia, c.ciudad, c.distrito,
-       c.periodo, c.fin_periodo, c.anio, c.trimestre, c.mes, c.nombre_mes, c.edad,
+       c.periodo, c.fin_periodo, c.anio, c.trimestre, c.mes, c.edad,
        CASE
            WHEN c.edad BETWEEN 30 AND 39 THEN N'30-39'
            WHEN c.edad BETWEEN 40 AND 49 THEN N'40-49'
@@ -148,7 +148,7 @@ SELECT c.key_persona, c.codigo_interno, c.sexo, c.estado_persona,
        CONVERT(BIT, CASE WHEN c.edad BETWEEN 30 AND 65 THEN 1 ELSE 0 END) AS en_rango_edad,
        c.id_tipo_seguimiento, c.tipo_control, c.origen_resultado,
        c.estado_validacion, c.resultado_referencia,
-       c.id_meta, c.criterio_meta, c.unidad, c.fecha_prevista,
+       c.id_meta, c.criterio_meta, c.unidad,
        c.factores_dentro_meta, c.factores_previstos, c.estado_datos, c.fecha_corte
 FROM CalculoEdad AS c;
 GO
@@ -157,9 +157,9 @@ GO
 CREATE OR ALTER VIEW [bi].[v_IndicadorFCM]
 AS
 WITH Mensual AS (
-    SELECT key_persona, codigo_interno, sexo, estado_persona,
+    SELECT key_persona, sexo, estado_persona,
            key_ubicacion, pais, departamento, provincia, ciudad, distrito,
-           periodo, fin_periodo, anio, trimestre, mes, nombre_mes,
+           periodo, fin_periodo, anio, trimestre, mes,
            edad, grupo_edad, en_rango_edad, fecha_corte,
            SUM(CONVERT(BIGINT, factores_dentro_meta)) AS numerador,
            SUM(CONVERT(BIGINT, factores_previstos)) AS denominador,
@@ -168,18 +168,18 @@ WITH Mensual AS (
            SUM(CASE WHEN estado_datos IN ('SIN_META', 'NO_VIGENTE', 'NO_PROGRAMADO') THEN 1 ELSE 0 END) AS factores_sin_seguimiento,
            SUM(CASE WHEN estado_datos = 'NO_PROGRAMADO' THEN 1 ELSE 0 END) AS factores_no_programados
     FROM [bi].[v_ControlesDetalle]
-    GROUP BY key_persona, codigo_interno, sexo, estado_persona,
+    GROUP BY key_persona, sexo, estado_persona,
              key_ubicacion, pais, departamento, provincia, ciudad, distrito,
-             periodo, fin_periodo, anio, trimestre, mes, nombre_mes,
+             periodo, fin_periodo, anio, trimestre, mes,
              edad, grupo_edad, en_rango_edad, fecha_corte
 ), Calculo AS (
     SELECT m.*,
            100.0 * CONVERT(DECIMAL(20,2), m.numerador) / NULLIF(m.denominador, 0) AS porcentaje_calculado
     FROM Mensual AS m
 )
-SELECT c.key_persona, c.codigo_interno, c.sexo, c.estado_persona,
+SELECT c.key_persona, c.sexo, c.estado_persona,
        c.key_ubicacion, c.pais, c.departamento, c.provincia, c.ciudad, c.distrito,
-       c.periodo, c.fin_periodo, c.anio, c.trimestre, c.mes, c.nombre_mes,
+       c.periodo, c.fin_periodo, c.anio, c.trimestre, c.mes,
        c.edad, c.grupo_edad, c.en_rango_edad, c.fecha_corte,
        c.numerador, c.denominador, c.factores_evaluados, c.factores_pendientes,
        c.factores_sin_seguimiento, c.factores_no_programados,
@@ -208,7 +208,7 @@ GO
 -- 4. Vista común: UNION ALL reúne ambos granos sin multiplicar las medidas por JOIN.
 CREATE OR ALTER VIEW [bi].[v_Indicadores]
 AS
-SELECT key_persona, codigo_interno, sexo, estado_persona,
+SELECT key_persona, sexo, estado_persona,
        key_ubicacion, pais, departamento, provincia, ciudad, distrito,
        edad, grupo_edad, en_rango_edad, periodo, fin_periodo,
        N'SEMANAL' AS periodicidad, codigo_indicador, unidad_medida,
@@ -216,7 +216,7 @@ SELECT key_persona, codigo_interno, sexo, estado_persona,
        es_evaluable, periodo_cerrado, fecha_corte
 FROM [bi].[v_IndicadoresSemanales]
 UNION ALL
-SELECT key_persona, codigo_interno, sexo, estado_persona,
+SELECT key_persona, sexo, estado_persona,
        key_ubicacion, pais, departamento, provincia, ciudad, distrito,
        edad, grupo_edad, en_rango_edad, periodo, fin_periodo,
        N'MENSUAL' AS periodicidad, codigo_indicador, unidad_medida,

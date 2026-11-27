@@ -28,7 +28,56 @@ SELECT @corte AS fecha_corte;
 
 SELECT COUNT(*) AS total_tablas_data_mart,
        CASE WHEN COUNT(*) = 8 THEN 'OK' ELSE 'REVISAR: deben existir 8 tablas' END AS validacion
-FROM [prevencion_cognitiva_mart].[sys].[tables];
+FROM [prevencion_cognitiva_mart].[sys].[tables]
+WHERE is_ms_shipped = 0 AND name <> N'sysdiagrams';
+
+-- Comprobar los nombres y el orden exacto de las columnas de la Tabla 4.
+-- KEY al inicio, niveles aprobados e ID al final. Cero discrepancias = correcto.
+;WITH Esperadas AS (
+    SELECT v.tabla, v.orden, v.columna
+    FROM (VALUES
+        (N'DIM_PERSONA',1,N'key_persona'), (N'DIM_PERSONA',2,N'estado'),
+        (N'DIM_PERSONA',3,N'grupo_edad'), (N'DIM_PERSONA',4,N'fecha_nacimiento'),
+        (N'DIM_PERSONA',5,N'fecha_alta'), (N'DIM_PERSONA',6,N'sexo'),
+        (N'DIM_PERSONA',7,N'nombres'), (N'DIM_PERSONA',8,N'id_persona'),
+        (N'DIM_TIEMPO',1,N'key_tiempo'), (N'DIM_TIEMPO',2,N'anio'),
+        (N'DIM_TIEMPO',3,N'trimestre'), (N'DIM_TIEMPO',4,N'mes'),
+        (N'DIM_TIEMPO',5,N'semana'), (N'DIM_TIEMPO',6,N'dia'),
+        (N'DIM_TIEMPO',7,N'dia_semana'), (N'DIM_TIEMPO',8,N'id_tiempo'),
+        (N'DIM_UBICACION',1,N'key_ubicacion'), (N'DIM_UBICACION',2,N'pais'),
+        (N'DIM_UBICACION',3,N'departamento'), (N'DIM_UBICACION',4,N'provincia'),
+        (N'DIM_UBICACION',5,N'ciudad'), (N'DIM_UBICACION',6,N'distrito'),
+        (N'DIM_UBICACION',7,N'id_ubicacion'),
+        (N'DIM_TIPO_SEGUIMIENTO',1,N'key_tipo_seguimiento'),
+        (N'DIM_TIPO_SEGUIMIENTO',2,N'periodicidad'), (N'DIM_TIPO_SEGUIMIENTO',3,N'tipo_seguimiento'),
+        (N'DIM_TIPO_SEGUIMIENTO',4,N'tipo_control'), (N'DIM_TIPO_SEGUIMIENTO',5,N'unidad_medida'),
+        (N'DIM_TIPO_SEGUIMIENTO',6,N'id_tipo_seguimiento'),
+        (N'DIM_ORIGEN_RESULTADO',1,N'key_origen_resultado'),
+        (N'DIM_ORIGEN_RESULTADO',2,N'origen_resultado'), (N'DIM_ORIGEN_RESULTADO',3,N'estado_validacion'),
+        (N'DIM_ORIGEN_RESULTADO',4,N'resultado_referencia'), (N'DIM_ORIGEN_RESULTADO',5,N'id_origen_resultado'),
+        (N'DIM_META',1,N'key_meta'), (N'DIM_META',2,N'tipo_meta'),
+        (N'DIM_META',3,N'criterio_meta'), (N'DIM_META',4,N'unidad'),
+        (N'DIM_META',5,N'origen_meta'), (N'DIM_META',6,N'version_meta'),
+        (N'DIM_META',7,N'vigencia'), (N'DIM_META',8,N'id_meta')
+    ) AS v(tabla, orden, columna)
+), Reales AS (
+    SELECT t.name COLLATE DATABASE_DEFAULT AS tabla,
+           ROW_NUMBER() OVER (PARTITION BY t.object_id ORDER BY c.column_id) AS orden,
+           c.name COLLATE DATABASE_DEFAULT AS columna
+    FROM [prevencion_cognitiva_mart].[sys].[tables] AS t
+    INNER JOIN [prevencion_cognitiva_mart].[sys].[columns] AS c ON c.object_id = t.object_id
+    INNER JOIN [prevencion_cognitiva_mart].[sys].[schemas] AS s ON s.schema_id = t.schema_id
+    WHERE s.name = N'dbo' AND t.name IN (N'DIM_PERSONA',N'DIM_TIEMPO',N'DIM_UBICACION',
+          N'DIM_TIPO_SEGUIMIENTO',N'DIM_ORIGEN_RESULTADO',N'DIM_META')
+)
+SELECT ISNULL(e.tabla, r.tabla) AS tabla,
+       ISNULL(e.orden, r.orden) AS posicion,
+       e.columna AS columna_esperada,
+       r.columna AS columna_real
+FROM Esperadas AS e
+FULL JOIN Reales AS r ON r.tabla = e.tabla AND r.orden = e.orden
+WHERE e.columna IS NULL OR r.columna IS NULL OR e.columna <> r.columna
+ORDER BY tabla, posicion;
 
 SELECT N'DIM_PERSONA' AS tabla, COUNT(*) AS filas FROM [prevencion_cognitiva_mart].[dbo].[DIM_PERSONA] UNION ALL
 SELECT N'DIM_TIEMPO', COUNT(*) FROM [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] UNION ALL

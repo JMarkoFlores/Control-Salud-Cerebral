@@ -2,6 +2,8 @@
 -- KEY = llave sustituta de la dimensión; ID = identificador del OLTP.
 -- PK = clave primaria, FK = clave foránea, UQ = valor o combinación única.
 -- El Data Mart contiene exactamente seis dimensiones y dos hechos.
+-- Los atributos dimensionales coinciden con la Tabla 4 del informe.
+-- Si ya existe la versión 4, ejecutar primero la migración 00.
 -- Ejecutar en la misma instancia que prevencion_cognitiva_oltp.
 USE [master];
 GO
@@ -27,9 +29,7 @@ CREATE TABLE [dbo].[DIM_PERSONA] (
     fecha_nacimiento  DATE NOT NULL,
     fecha_alta        DATETIME2 NOT NULL,
     sexo              CHAR(1) NULL,
-    codigo_interno    NVARCHAR(20) NOT NULL,
-    nombres           NVARCHAR(100) NOT NULL,
-    apellidos         NVARCHAR(100) NOT NULL,
+    nombres           NVARCHAR(201) NOT NULL,
     id_persona        INT NOT NULL,
 
     CONSTRAINT PK_DIM_PERSONA PRIMARY KEY (key_persona),
@@ -44,11 +44,7 @@ CREATE TABLE [dbo].[DIM_TIEMPO] (
     anio              SMALLINT NOT NULL,
     trimestre         TINYINT NOT NULL,
     mes               TINYINT NOT NULL,
-    nombre_mes        NVARCHAR(12) NOT NULL,
-    anio_semana_iso   SMALLINT NOT NULL,
-    semana_iso        TINYINT NOT NULL,
-    inicio_semana     DATE NOT NULL,
-    inicio_mes        DATE NOT NULL,
+    semana            TINYINT NOT NULL,
     dia               TINYINT NOT NULL,
     dia_semana        NVARCHAR(12) NOT NULL,
     id_tiempo         DATE NOT NULL,
@@ -113,13 +109,7 @@ CREATE TABLE [dbo].[DIM_META] (
     unidad             NVARCHAR(20) NULL,
     origen_meta        NVARCHAR(30) NULL,
     version_meta       INT NULL,
-    vigente            BIT NULL,
-    inicio_vigencia    DATE NULL,
-    fecha_prevista     DATE NULL,
-    fecha_registro     DATETIME2 NULL,
-    valor_meta_min     DECIMAL(6, 2) NULL,
-    valor_meta_max     DECIMAL(6, 2) NULL,
-    valor_meta_max_diast DECIMAL(6, 2) NULL,
+    vigencia           BIT NULL,
     id_meta            NVARCHAR(40) NOT NULL,
 
     CONSTRAINT PK_DIM_META PRIMARY KEY (key_meta),

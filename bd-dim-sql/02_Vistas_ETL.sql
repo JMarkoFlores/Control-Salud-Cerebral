@@ -9,7 +9,8 @@ GO
 CREATE OR ALTER VIEW [dbo].[v_DatosDimPersona]
 AS
 SELECT p.persona_id AS id_persona,
-       p.codigo_interno, p.nombres, p.apellidos, p.fecha_nacimiento,
+       CONVERT(NVARCHAR(201), TRIM(CONCAT(p.nombres, N' ', p.apellidos))) AS nombres,
+       p.fecha_nacimiento,
        p.sexo, p.fecha_alta,
        CASE WHEN p.activo = 1 THEN N'ACTIVO' ELSE N'INACTIVO' END AS estado,
        p.ubicacion_id AS id_ubicacion
@@ -85,13 +86,7 @@ SELECT CONVERT(NVARCHAR(40), N'SEM:' + CONVERT(NVARCHAR(12), m.meta_id)) AS id_m
        N'Alcanzar meta personal semanal' AS criterio_meta,
        CONVERT(NVARCHAR(20), m.unidad) COLLATE DATABASE_DEFAULT AS unidad,
        CONVERT(NVARCHAR(30), m.origen_meta) COLLATE DATABASE_DEFAULT AS origen_meta,
-       m.version_meta, m.vigente,
-       m.inicio_semana AS inicio_vigencia,
-       CONVERT(DATE, NULL) AS fecha_prevista,
-       m.fecha_registro,
-       CONVERT(DECIMAL(6,2), NULL) AS valor_meta_min,
-       CONVERT(DECIMAL(6,2), NULL) AS valor_meta_max,
-       CONVERT(DECIMAL(6,2), NULL) AS valor_meta_max_diast
+       m.version_meta, m.vigente AS vigencia
 FROM [dbo].[meta_semanal] AS m
 
 UNION ALL
@@ -100,14 +95,12 @@ SELECT CONVERT(NVARCHAR(40), N'CTRL:' + CONVERT(NVARCHAR(12), c.control_id)),
        N'CARDIOMETABOLICA',
        CONVERT(NVARCHAR(100), c.criterio_meta_texto) COLLATE DATABASE_DEFAULT,
        CONVERT(NVARCHAR(20), c.unidad) COLLATE DATABASE_DEFAULT,
-       N'NO_REGISTRADO', NULL, c.vigente, c.mes_periodo, c.fecha_prevista, NULL,
-       c.valor_meta_min, c.valor_meta_max, c.valor_meta_max_diast
+       N'NO_REGISTRADO', NULL, c.vigente
 FROM [dbo].[control_programado] AS c
 
 UNION ALL
 
-SELECT N'SIN_META', N'SIN_META', NULL, NULL, NULL, NULL, NULL,
-       NULL, NULL, NULL, NULL, NULL, NULL;
+SELECT N'SIN_META', N'SIN_META', NULL, NULL, NULL, NULL, NULL;
 GO
 
 -- D2. Fechas de origen: determinar el inicio de seguimiento de cada persona.
@@ -164,6 +157,7 @@ GROUP BY c.persona_id, CONVERT(DATE, c.fecha_hora);
 GO
 
 -- H2. Preparar los controles y verificar que tengan criterios registrados.
+-- Los valores límite y la fecha prevista permanecen en el OLTP; no son niveles de DIM_META.
 -- TRIM quita los espacios de los extremos de un texto.
 -- Sólo se consideran los límites ingresados; no se asignan límites médicos nuevos.
 CREATE OR ALTER VIEW [dbo].[v_DatosControlProgramado]
@@ -230,8 +224,9 @@ CREATE OR ALTER VIEW [dbo].[v_HechoHabitosSemanales]
 AS
 WITH HabitosDiarios AS (
     -- DIM_TIEMPO contiene todos los días, incluidos aquellos sin registros.
+    -- DATETRUNC(ISO_WEEK, fecha) obtiene el lunes sin guardar otro nivel en la dimensión.
     SELECT p.id_persona, p.key_persona, p.key_ubicacion,
-           semana.key_tiempo, dia.inicio_semana,
+           semana.key_tiempo, DATETRUNC(ISO_WEEK, dia.id_tiempo) AS inicio_semana,
            s.key_tipo_seguimiento,
            s.id_tipo_seguimiento COLLATE DATABASE_DEFAULT AS habito,
            p.fecha_corte,
@@ -247,7 +242,7 @@ WITH HabitosDiarios AS (
     INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS dia
         ON dia.id_tiempo BETWEEN p.inicio_seguimiento AND p.fecha_corte
     INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS semana
-        ON semana.id_tiempo = dia.inicio_semana
+        ON semana.id_tiempo = DATETRUNC(ISO_WEEK, dia.id_tiempo)
     CROSS JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIPO_SEGUIMIENTO] AS s
     LEFT JOIN [dbo].[v_DatosHabitosDiarios] AS a
         ON a.persona_id = p.id_persona
@@ -321,7 +316,7 @@ WITH ControlesBase AS (
            r.valor_numerico, r.valor_sistolica, r.valor_diastolica
     FROM [dbo].[v_PersonasETL] AS p
     INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS t
-        ON t.id_tiempo = t.inicio_mes
+        ON DAY(t.id_tiempo) = 1
        AND t.id_tiempo <= p.fecha_corte
        AND EOMONTH(t.id_tiempo) >= p.inicio_seguimiento
     CROSS JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIPO_SEGUIMIENTO] AS s

@@ -68,7 +68,7 @@ DECLARE @controles_esperados BIGINT;
 
 SELECT @habitos_esperados = COUNT_BIG(*) * 2
 FROM (
-    SELECT DISTINCT p.key_persona, t.inicio_semana
+    SELECT DISTINCT p.key_persona, DATETRUNC(ISO_WEEK, t.id_tiempo) AS inicio_semana
     FROM [dbo].[v_PersonasETL] AS p
     INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS t
         ON t.id_tiempo BETWEEN p.inicio_seguimiento AND p.fecha_corte
@@ -76,7 +76,7 @@ FROM (
 
 SELECT @controles_esperados = COUNT_BIG(*) * 4
 FROM (
-    SELECT DISTINCT p.key_persona, t.inicio_mes
+    SELECT DISTINCT p.key_persona, DATETRUNC(MONTH, t.id_tiempo) AS inicio_mes
     FROM [dbo].[v_PersonasETL] AS p
     INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS t
         ON t.id_tiempo BETWEEN p.inicio_seguimiento AND p.fecha_corte

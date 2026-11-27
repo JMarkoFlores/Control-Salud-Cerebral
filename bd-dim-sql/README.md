@@ -6,7 +6,7 @@
 **Destino propuesto:** `prevencion_cognitiva_mart` (una sola base dimensional).  
 **Alcance:** autoseguimiento. La aplicación transaccional y los visualizadores no se modifican con estos scripts.
 
-**Versión 4 (método del ingeniero):** el Data Mart tiene exactamente ocho tablas, seis dimensiones y dos hechos. Las vistas de preparación y las cargas ETL se ejecutan desde `prevencion_cognitiva_oltp`; el destino se referencia por `[prevencion_cognitiva_mart].[dbo].[Tabla]`. No se crea ninguna tabla técnica de auditoría ni procedimiento coordinador. Los indicadores y los reportes se conservan.
+**Versión 5 (Tabla 4 del informe):** el Data Mart tiene exactamente ocho tablas analíticas, seis dimensiones y dos hechos. Cada dimensión conserva exclusivamente los niveles aprobados, además de su KEY e ID. Las vistas de preparación y las cargas ETL se ejecutan desde `prevencion_cognitiva_oltp`; se conservan las seis medidas y los tres indicadores. No se crea auditoría ni coordinador.
 
 ## 1. Orden de instalación y ejecución en SSMS
 
@@ -56,20 +56,11 @@ SELECT name AS tabla FROM sys.tables ORDER BY name;
 
 Una instalación limpia de esta versión devuelve exactamente ocho tablas. Las vistas y los procedimientos de `bi` no se cuentan como tablas.
 
-### Sólo si se instaló la versión anterior
+### Actualización de la versión 4 ya instalada
 
-Esta versión no elimina bases ni datos existentes. Si nunca se ejecutó la versión anterior, omite esta sección. Si ya se instaló, primero ejecuta y valida los siete scripts nuevos; la antigua tabla auxiliar no se elimina automáticamente. Tras hacer una copia de seguridad y comprobar que los objetos del esquema `etl` pertenecen al paquete anterior, puedes retirar **sólo los objetos antiguos** con estas instrucciones opcionales. No ejecutar en una instalación limpia.
+Si ya creaste y cargaste el Data Mart de la versión 4, haz una copia de seguridad y ejecuta primero **`00_Migrar_DataMart_v4_a_v5.sql`**. Esta migración combina nombres y apellidos, renombra `semana_iso` a `semana` y `vigente` a `vigencia`, y retira sólo las columnas dimensionales que no figuran en la Tabla 4. No vuelve a crear tablas, no elimina filas ni modifica las claves; la base transaccional queda intacta. Después ejecuta 01 a 07 en orden para que se actualicen las vistas de origen, el ETL y los reportes. Durante la migración no utilices los visualizadores porque algunas vistas antiguas dependerán de columnas retiradas hasta recrearlas.
 
-```sql
-USE [prevencion_cognitiva_mart];
-GO
-DROP PROCEDURE IF EXISTS [etl].[usp_ActualizarDataMart], [etl].[usp_CargarDimensiones], [etl].[usp_CargarHechos];
-DROP VIEW IF EXISTS [etl].[v_DatosDimOrigenResultado], [etl].[v_DatosDimMeta], [etl].[v_DatosDimPersona], [etl].[v_DatosDimUbicacion], [etl].[v_DatosDimTipoSeguimiento], [etl].[v_InicioSeguimiento], [etl].[v_DatosHabitosDiarios], [etl].[v_DatosControlProgramado], [etl].[v_DatosResultados];
-DROP TABLE IF EXISTS [etl].[AUDITORIA_CARGA];
-GO
-```
-
-Esta limpieza no forma parte de los siete scripts nuevos; elimina la antigua información auxiliar, no las seis dimensiones ni los dos hechos. No vuelvas a ejecutar la creación incondicional del OLTP si éste ya existe. Los nombres de restricciones de una instalación anterior pueden permanecer sin alterar el modelo.
+Si se trata de una instalación nueva, omite 00 y comienza con 01. No vuelvas a ejecutar la creación incondicional del OLTP si éste ya existe. El paso 06 comprueba los nombres y el orden exactos de las columnas de cada dimensión. Si la consulta de discrepancias no devuelve filas, el modelo coincide con la Tabla 4.
 
 ### Lectura de los scripts y funciones SQL utilizadas
 
@@ -83,6 +74,7 @@ La sintaxis que usa el profesor `[BaseDeDatos].[esquema].[tabla]` identifica la 
 | `DATENAME` | Devuelve una parte de la fecha como texto, según el idioma. | Con `SET LANGUAGE Spanish`, `DATENAME(MONTH, '20261126')` → noviembre. |
 | `SET DATEFIRST 1` | Indica que la semana comienza el lunes (1). | `DATEPART(WEEKDAY, '20261123')` → 1. |
 | `DATEFROMPARTS` | Construye una fecha con año, mes y día. | `DATEFROMPARTS(2026, 11, 1)` → 2026-11-01. |
+| `DATETRUNC` | Obtiene el inicio de un periodo. `ISO_WEEK` siempre empieza el lunes. Disponible en SQL Server 2022. | `DATETRUNC(ISO_WEEK, CAST('20261126' AS DATE))` → 2026-11-23. |
 | `EOMONTH` | Obtiene el último día del mes. | `EOMONTH('20261101')` → 2026-11-30. |
 | `ISNULL` | Sustituye un nulo cuando corresponde. No se utiliza para convertir un KPI pendiente en cero. | `ISNULL(NULL, 5)` → 5. |
 | `NULLIF` | Devuelve NULL si dos valores son iguales; evita dividir entre cero. | `100.0 / NULLIF(0, 0)` → NULL. |
@@ -105,14 +97,27 @@ Todas las dimensiones comienzan con `key_<dimensión> INT IDENTITY(1,1) PRIMARY 
 
 | Dimensión | Campos de origen | Atributos de destino / transformación | ID de origen |
 |---|---|---|---|
-| D1 `DIM_PERSONA` | `persona.activo`, `fecha_nacimiento`, `fecha_alta`, `sexo`, `codigo_interno`, `nombres`, `apellidos`, `persona_id` | Estado, grupo de edad, fecha de nacimiento, fecha de alta, sexo, código interno, nombres, apellidos. Grupo de edad al corte: 30–39, 40–49, 50–59, 60–65 u otro. Las vistas recalculan edad al cierre de cada periodo. | `id_persona = persona.persona_id` |
-| D2 `DIM_TIEMPO` | `persona.fecha_alta`, `meta_semanal.inicio_semana`, `sesion_fisica.fecha_hora`, `contacto_social.fecha_hora`, `confirmacion_diaria.fecha`, `control_programado.mes_periodo`, `resultado_control.fecha_medicion` | Calendario continuo desde el primer mes/semana de seguimiento al corte, año, trimestre, mes y nombre de mes, año y semana ISO, lunes, inicio del mes, día y día de semana. | `id_tiempo = fecha DATE` (valor natural derivado) |
+| D1 `DIM_PERSONA` | `persona.activo`, `fecha_nacimiento`, `fecha_alta`, `sexo`, `nombres`, `apellidos`, `persona_id` | Estado, grupo de edad, fecha de nacimiento, fecha de alta, sexo, nombres (nombres y apellidos concatenados en un solo campo). Grupo de edad al corte: 30–39, 40–49, 50–59, 60–65 u otro. Las vistas recalculan edad al cierre de cada periodo. | `id_persona = persona.persona_id` |
+| D2 `DIM_TIEMPO` | `persona.fecha_alta`, `meta_semanal.inicio_semana`, `sesion_fisica.fecha_hora`, `contacto_social.fecha_hora`, `confirmacion_diaria.fecha`, `control_programado.mes_periodo`, `resultado_control.fecha_medicion` | Calendario continuo: año, trimestre, mes, semana ISO, día y día de semana. El inicio de cada semana/mes se calcula a partir de `id_tiempo` durante el ETL, sin guardar columnas adicionales. | `id_tiempo = fecha DATE` (valor natural derivado) |
 | D3 `DIM_UBICACION` | `ubicacion.pais`, `departamento`, `provincia`, `distrito`, `ubicacion_id`; enlace `persona.ubicacion_id` | País, departamento, provincia, ciudad y distrito. Ciudad queda `NULL` porque no existe en el origen; no se debe equiparar provincia y ciudad. | `id_ubicacion = ubicacion.ubicacion_id` |
 | D4 `DIM_TIPO_SEGUIMIENTO` | Dominio de `meta_semanal.habito`, `control_programado.tipo_control` y `resultado_control.tipo_control` | Periodicidad, tipo de seguimiento, tipo de control, unidad de medida. Dos categorías semanales y cuatro categorías de control mensual. | `id_tipo_seguimiento` (código normalizado del valor origen) |
 | D5 `DIM_ORIGEN_RESULTADO` | `resultado_control.origen`, `validado`, `es_referencia` | Origen, estado de validación interna y marca de referencia. Categoría `SIN_RESULTADO` para el control sin resultado seleccionado. | `id_origen_resultado = ORIGEN\|validado\|es_referencia` |
-| D6 `DIM_META` | `meta_semanal`: `meta_id`, `unidad`, `origen_meta`, `version_meta`, `vigente`, `inicio_semana`, `fecha_registro`; `control_programado`: `control_id`, `criterio_meta_texto`, `unidad`, `vigente`, `mes_periodo`, `fecha_prevista`, límites | Tipo, criterio, unidad, origen, versión, vigencia, fecha prevista, fecha de registro y límites de la meta cardiometabólica. El origen/versión clínicos no están registrados como tales en OLTP. El valor de meta semanal sigue siendo una medida en el hecho. | `id_meta = SEM:<meta_id>` o `CTRL:<control_id>`; `SIN_META` para ausencia. El prefijo evita colisiones entre tablas. |
+| D6 `DIM_META` | `meta_semanal`: `meta_id`, `unidad`, `origen_meta`, `version_meta`, `vigente`; `control_programado`: `control_id`, `criterio_meta_texto`, `unidad`, `vigente` | Tipo, criterio, unidad, origen, versión y vigencia. Los límites numéricos y las fechas de los controles permanecen en el OLTP y se usan temporalmente para evaluar las medidas. El origen/versión clínicos no están registrados como tales en OLTP. El valor de meta semanal sigue siendo una medida en el hecho. | `id_meta = SEM:<meta_id>` o `CTRL:<control_id>`; `SIN_META` para ausencia. El prefijo evita colisiones entre tablas. |
 
 D2, D4 y D5 no tienen una PK propia en una tabla de catálogo del OLTP; sus identificadores se derivan del contenido transaccional. Los IDs de origen no son autoincrementables en el Mart.
+
+### Campos físicos aprobados (orden exacto)
+
+| Tabla | Campos |
+|---|---|
+| DIM_PERSONA | key_persona, estado, grupo_edad, fecha_nacimiento, fecha_alta, sexo, nombres, id_persona |
+| DIM_TIEMPO | key_tiempo, anio, trimestre, mes, semana, dia, dia_semana, id_tiempo |
+| DIM_UBICACION | key_ubicacion, pais, departamento, provincia, ciudad, distrito, id_ubicacion |
+| DIM_TIPO_SEGUIMIENTO | key_tipo_seguimiento, periodicidad, tipo_seguimiento, tipo_control, unidad_medida, id_tipo_seguimiento |
+| DIM_ORIGEN_RESULTADO | key_origen_resultado, origen_resultado, estado_validacion, resultado_referencia, id_origen_resultado |
+| DIM_META | key_meta, tipo_meta, criterio_meta, unidad, origen_meta, version_meta, vigencia, id_meta |
+
+Los campos `estado_datos` y `fecha_corte` permanecen en ambos hechos como atributos técnicos de seguimiento, no como medidas adicionales ni niveles dimensionales. Los números clínicos y fechas de programación no se copian al Data Mart.
 
 ## 3. Mapeo de hechos y medidas
 
@@ -171,14 +176,14 @@ Los siguientes son ejemplos ficticios de verificación, no resultados reales de 
 | Objeto | Uso |
 |---|---|
 | `bi.v_Indicadores` | Fuente unificada: código CAF/CCS/FCM, persona pseudonimizada, demografía, ubicación, periodo, numerador, denominador, porcentaje, estados y fecha de corte. |
-| `bi.v_IndicadoresSemanales` | Detalle semanal y M1–M4, meta utilizada, semana ISO y año ISO. |
+| `bi.v_IndicadoresSemanales` | Detalle semanal y M1–M4, meta utilizada, semana ISO y año del calendario. |
 | `bi.v_ControlesDetalle` | Detalle mensual de los cuatro tipos de control, M5/M6, origen, fecha prevista y estado de los datos. |
 | `bi.v_IndicadorFCM` | Indicador mensual por persona y coberturas de evaluación. |
 | `bi.v_ResumenIndicadores` | Resumen por indicador y periodo de participantes en el rango 30–65 años en Perú. Excluye pendientes de la tasa agregada y muestra sus cantidades. |
 
 Para otros segmentos, consultar `bi.v_Indicadores` filtrando por rango de edad, departamento, provincia y distrito. Agrupar por `codigo_indicador` y por el periodo correspondiente y dividir sumas de numeradores y denominadores de filas evaluables. La semana se identifica por su lunes (no por la llave numérica mínima/máxima); si se presenta por mes, se atribuye al mes de ese lunes. No unir directamente ambos hechos por persona y fecha, pues tienen distinta granularidad y se multiplicarían registros.
 
-El backend del dashboard debe aplicar autenticación y permisos por titular y rol. Sólo debe concederse acceso de lectura a las vistas analíticas necesarias y a datos agregados autorizados; un código interno sigue siendo información pseudonimizada, no anónima. No poner credenciales SQL en Google Charts ni en el navegador. No se da acceso a las vistas ETL del OLTP ni a las tablas de nombres para visualizadores de acceso general. El administrador puede configurar un usuario técnico con permisos mínimos. En producción corresponde validar permisos, cifrado, política de retención y pruebas de protección de datos de salud.
+El backend del dashboard debe aplicar autenticación y permisos por titular y rol. Sólo debe concederse acceso de lectura a las vistas analíticas necesarias y a datos agregados autorizados; la `key_persona` utilizada en los reportes sigue siendo un identificador pseudonimizado, no anónimo. No poner credenciales SQL en Google Charts ni en el navegador. No se da acceso a las vistas ETL del OLTP ni a las tablas de nombres para visualizadores de acceso general. El administrador puede configurar un usuario técnico con permisos mínimos. En producción corresponde validar permisos, cifrado, política de retención y pruebas de protección de datos de salud.
 
 ### Reportes del Data Mart (un solo archivo SQL)
 
@@ -190,7 +195,7 @@ El backend del dashboard debe aplicar autenticación y permisos por titular y ro
 | R02 | Reporte semanal de actividad física | `bi.usp_ReporteActividadFisicaSemanal` | M1, M2, CAF, estado y periodo. |
 | R03 | Reporte semanal de contacto social | `bi.usp_ReporteContactoSocialSemanal` | M3, M4, CCS, estado y periodo. |
 | R04 | Reporte mensual de controles cardiometabólicos | `bi.usp_ReporteControlesCardiometabolicosMensuales` | FCM por participante (M5/M6) y detalle de los cuatro factores. |
-| R05 | Reporte de pendientes y controles no programados | `bi.usp_ReportePendientesSeguimiento` | Hábitos pendientes/sin meta y factores pendientes, sin meta o no programados; identifica controles vencidos. |
+| R05 | Reporte de pendientes y controles no programados | `bi.usp_ReportePendientesSeguimiento` | Hábitos pendientes/sin meta y factores pendientes, sin meta o no programados; identifica pendientes en periodos cerrados y en curso (sin evaluar una fecha individual de vencimiento, que no es un nivel de Meta). |
 | R06 | Reporte de evolución y comparación de segmentos | `bi.usp_ReporteEvolucionPreventiva` | Series por periodo/indicador y comparación por distrito, edad y sexo. |
 
 Para mostrar el reporte principal del informe en SSMS:
@@ -203,11 +208,11 @@ EXEC bi.usp_ReporteSeguimientoPreventivo
     @provincia=N'Trujillo';
 ```
 
-Si no se indican fechas se usa la semana y el mes del último ETL completado. Se pueden seleccionar una semana (lunes) y un mes (primer día), de forma independiente. En los otros cinco procedimientos, `@desde` y `@hasta` filtran las fechas de inicio de periodo de manera inclusiva; si se omiten se obtiene el historial disponible. Se puede filtrar por código interno del titular, país, departamento, provincia, distrito, sexo y grupo de edad. El rango de 30–65 años se aplica de forma predeterminada.
+Si no se indican fechas se usa la semana y el mes del último ETL completado. Se pueden seleccionar una semana (lunes) y un mes (primer día), de forma independiente. En los otros cinco procedimientos, `@desde` y `@hasta` filtran las fechas de inicio de periodo de manera inclusiva; si se omiten se obtiene el historial disponible. Se puede filtrar por `@key_persona` (la KEY dimensional del titular), país, departamento, provincia, distrito, sexo y grupo de edad. El rango de 30–65 años se aplica de forma predeterminada.
 
-En la aplicación, el backend puede ejecutar cada procedimiento mediante el driver `mssql` y mapear los conjuntos de resultados (`recordsets`) según el orden documentado. R01 devuelve cinco conjuntos, R04, R05 y R06 devuelven dos cada uno, R02 y R03 devuelven uno cada uno. Para R01, las tarjetas consumen el conjunto A, la tabla el conjunto B, los gráficos C y D, y el detalle de controles el E. Los reportes no añaden indicadores; sólo reorganizan las seis medidas y los tres KPI establecidos. El frontend no debe realizar un nuevo cálculo de los porcentajes ni reemplazar nulos por cero. Las tasas poblacionales usan sumas de medidas de registros evaluables y muestran aparte la cobertura y los pendientes.
+En la aplicación, el backend obtiene la KEY del titular autenticado mediante `SELECT key_persona FROM [dbo].[DIM_PERSONA] WHERE id_persona = @id_persona`, con el ID autorizado por la sesión. Después puede ejecutar cada procedimiento mediante el driver `mssql` y mapear los conjuntos de resultados (`recordsets`) según el orden documentado. R01 devuelve cinco conjuntos, R04, R05 y R06 devuelven dos cada uno, R02 y R03 devuelven uno cada uno. Para R01, las tarjetas consumen el conjunto A, la tabla el conjunto B, los gráficos C y D, y el detalle de controles el E. Los reportes no añaden indicadores; sólo reorganizan las seis medidas y los tres KPI establecidos. El frontend no debe realizar un nuevo cálculo de los porcentajes ni reemplazar nulos por cero. Las tasas poblacionales usan sumas de medidas de registros evaluables y muestran aparte la cobertura y los pendientes.
 
-Los filtros no sustituyen la autorización de acceso: el backend debe imponer el código del titular autenticado o el alcance agregado autorizado para un administrador. No se debe permitir que un titular consulte el historial de otra persona enviando un código diferente o dejando el parámetro vacío.
+Los filtros no sustituyen la autorización de acceso: el backend debe imponer la KEY dimensional del titular autenticado o el alcance agregado autorizado para un administrador. No se debe permitir que un titular consulte el historial de otra persona enviando una KEY diferente o dejando el parámetro vacío.
 
 ## 6. Decisiones, límites del origen y mantenimiento
 
