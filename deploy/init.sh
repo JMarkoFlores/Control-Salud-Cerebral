@@ -16,6 +16,12 @@ until "$SQLCMD" -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -b -I -Q "SELECT 1
   sleep 3
 done
 
+if [ "${RESET_DB:-false}" = "true" ]; then
+  echo "[db-init] RESET_DB=true: eliminando bases existentes"
+  "$SQLCMD" -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -b -I -Q \
+    "IF DB_ID(N'prevencion_cognitiva_oltp') IS NOT NULL BEGIN ALTER DATABASE [prevencion_cognitiva_oltp] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [prevencion_cognitiva_oltp]; END; IF DB_ID(N'prevencion_cognitiva_mart') IS NOT NULL BEGIN ALTER DATABASE [prevencion_cognitiva_mart] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [prevencion_cognitiva_mart]; END;"
+fi
+
 run /scripts/bd-sql/bd-transaccional.sql
 
 if [ "${SEED_DATA:-false}" = "true" ]; then
