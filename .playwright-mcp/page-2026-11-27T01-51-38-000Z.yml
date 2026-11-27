@@ -1,0 +1,64 @@
+- generic [ref=f1e8]:
+  - banner [ref=f1e511]:
+    - img "CloudBeaver Community ver. 26.2.5" [ref=f1e513] [cursor=pointer]
+    - generic [ref=f1e514]:
+      - button "Conexiones" [ref=f1e515] [cursor=pointer]
+      - generic [ref=f1e521]: Administración
+    - generic "Perfil" [ref=f1e564] [cursor=pointer]: cbadmin
+    - menubar [ref=f1e557]:
+      - menuitem "Atajos de teclado" [ref=f1e558] [cursor=pointer]
+      - menuitem "Configuración" [ref=f1e561] [cursor=pointer]
+  - generic [ref=f1e569]:
+    - tablist "Administration items" [ref=f1e570]:
+      - tab "Configuración del servidor" [selected] [ref=f1e571]
+      - tab "Configuración" [ref=f1e576] [cursor=pointer]
+      - tab "Usuarios y equipos" [ref=f1e581] [cursor=pointer]
+      - tab "Configuración de IA" [ref=f1e586] [cursor=pointer]
+      - tab "Información del producto" [ref=f1e591] [cursor=pointer]
+    - group [ref=f1e596]
+    - tabpanel "Configuración del servidor" [ref=f1e610]:
+      - generic [ref=f1e611]:
+        - generic [ref=f1e612]:
+          - heading [level=1] [ref=f1e613]:
+            - link "Configuración del servidor" [ref=f1e615] [cursor=pointer]:
+              - /url: https://dbeaver.com/docs/cloudbeaver/Server-configuration-administration/
+          - generic [ref=f1e618]:
+            - button "Cancelar" [disabled]
+            - button "Guardar" [disabled]
+        - group [ref=f1e620]:
+          - generic [ref=f1e621]:
+            - tablist "Configuración del servidor" [ref=f1e622]:
+              - tab "Información del servidor" [selected] [ref=f1e623]
+              - tab "Autenticación" [ref=f1e626] [cursor=pointer]
+              - tab "Seguridad" [ref=f1e629] [cursor=pointer]
+              - tab "Controladores" [ref=f1e632] [cursor=pointer]
+            - group [ref=f1e635]:
+              - tab "Funciones" [ref=f1e640] [cursor=pointer]
+          - tabpanel "Información del servidor" [ref=f1e650]:
+            - region "Información del servidor" [ref=f1e652]:
+              - generic [ref=f1e653]:
+                - generic [ref=f1e654]:
+                  - generic [ref=f1e655]:
+                    - text: Nombre del servidor
+                    - generic [aria-hidden] [ref=f1e656]: "*"
+                  - textbox "Nombre del servidor" [ref=f1e658]: CloudBeaver Community
+                - generic [ref=f1e659]:
+                  - generic "URL del servidor para acceso global" [ref=f1e660]: URL del servidor permitidas
+                  - textbox "URL del servidor permitidas" [ref=f1e661]:
+                    - /placeholder: "example.com\nlocalhost:5000"
+                  - generic [ref=f1e662]: Puede especificar varias URL del servidor separadas por saltos de línea. Un valor vacío permite todas las URL. El acceso desde direcciones IP siempre está permitido.
+                - generic [ref=f1e663]:
+                  - generic "Aquí puede indicar cuántos minutos puede permanecer inactiva la sesión antes de caducar" [ref=f1e664]:
+                    - text: Duración de la sesión, min
+                    - generic [aria-hidden] [ref=f1e665]: "*"
+                  - spinbutton "Duración de la sesión, min" [ref=f1e667]: "30"
+                - generic [ref=f1e668]:
+                  - generic [ref=f1e669] [cursor=pointer]:
+                    - switch "Forzar modo HTTPS Los datos no se cifrarán si se desactiva el modo HTTPS obligatorio. Esto los hace vulnerables" [ref=f1e671]
+                    - generic [ref=f1e673]:
+                      - text: Forzar modo HTTPS
+                      - img "Los datos no se cifrarán si se desactiva el modo HTTPS obligatorio. Esto los hace vulnerables" [ref=f1e674]
+                  - generic [ref=f1e676]:
+                    - generic [ref=f1e677]: Active HTTPS obligatorio para proteger la comunicación entre servidor y cliente. Recomendado en producción. Compruebe que su proxy HTTPS esté bien configurado para que la aplicación funcione correctamente
+                    - link "Documentación de configuración del proxy del servidor" [ref=f1e679] [cursor=pointer]:
+                      - /url: https://dbeaver.com/docs/cloudbeaver/Proxy-Configuration/

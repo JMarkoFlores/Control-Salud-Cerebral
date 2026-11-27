@@ -1,0 +1,21 @@
+- generic [ref=f1e8]:
+  - banner [ref=f1e9]:
+    - img "CloudBeaver Community ver. 26.2.5" [ref=f1e11]
+    - generic [ref=f1e12]: Configuración inicial del servidor
+    - combobox [ref=f1e15] [cursor=pointer]:
+      - generic "Español" [ref=f1e18]
+  - generic [ref=f1e19]:
+    - tablist "Administration items" [ref=f1e20]:
+      - tab "Bienvenido" [ref=f1e21] [cursor=pointer]
+      - tab "Configuración del servidor" [ref=f1e26] [cursor=pointer]
+      - tab "Configuración" [selected] [ref=f1e209]
+      - tab "Confirmación" [ref=f1e214] [cursor=pointer]
+    - group [ref=f1e31]
+    - generic [ref=f1e40]:
+      - generic [ref=f1e41]:
+        - generic [ref=f1e42]:
+          - button "Atrás" [ref=f1e55] [cursor=pointer]
+          - button "Siguiente" [active] [ref=f1e43] [cursor=pointer]
+        - generic [ref=f1e45]: Configuración
+      - tabpanel "Configuración" [ref=f1e219]:
+        - generic [ref=f1e220]: Cargando...

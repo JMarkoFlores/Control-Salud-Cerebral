@@ -192,7 +192,20 @@ Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1
 ### 6.4 Actualizar el Data Mart
 En **Reportes Analíticos** (rol ADMIN) está el botón **Actualizar Data Mart**. Ejecuta el ETL `03` (dimensiones) y `04` (hechos) desde la base transaccional y devuelve filas cargadas, duración y fecha de corte. El endpoint es `POST /api/v1/admin/datamart/refresh` y rechaza ejecuciones simultáneas.
 
-### 6.5 Notas
+### 6.5 Panel de bases de datos (CloudBeaver)
+- URL: `https://db-saludcerebral.giansmd.dev` (contenedor `cloudbeaver`, puerto interno 8978).
+- Usuario administrador `cbadmin`; contraseña en el gestor de secretos del equipo, nunca en el repo.
+- Dos conexiones compartidas: `SQL Server OLTP (salud cerebral)` y `SQL Server Data Mart (salud cerebral)`, ambas sobre la misma instancia `sqlserver:1433`.
+- En el primer uso de cada conexión se piden usuario y contraseña de SQL Server; al marcar "Guardar credenciales para todos los usuarios con acceso" quedan cifradas en el volumen `cloudbeaver-data`.
+- Las conexiones viven en el volumen, así que sobreviven a redeploys. El entrypoint solo siembra la plantilla en el primer arranque.
+
+Alternativa por terminal dentro del VPS:
+```bash
+docker exec -it control-salud-cerebral-lmb9cv-sqlserver-1 bash
+/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -d prevencion_cognitiva_oltp
+```
+
+### 6.6 Notas
 - `msnodesqlv8` (autenticación Windows) queda como dependencia opcional: en el servidor se usa autenticación SQL con `sa`.
 - Los cambios de esquema se aplican volviendo a ejecutar el job `db-init`; los scripts `01`, `02`, `05` y `07` son idempotentes.
 

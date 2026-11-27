@@ -1,0 +1,120 @@
+- generic [active] [ref=f1e6]:
+  - generic [ref=f1e8]:
+    - navigation "Omitir navegación":
+      - button "Ir al navegador" [ref=f1e682] [cursor=pointer]
+      - button "Ir al contenido principal" [ref=f1e683] [cursor=pointer]
+      - button "Atajos de teclado" [ref=f1e684] [cursor=pointer]
+    - banner [ref=f1e685]:
+      - img "CloudBeaver Community ver. 26.2.5" [ref=f1e687] [cursor=pointer]
+      - menubar [ref=f1e689]:
+        - menuitem "Conexión" [ref=f1e690] [cursor=pointer]
+        - menuitem "Abrir editor SQL para SQL Server Data Mart (salud cerebral)" [ref=f1e1435] [cursor=pointer]
+        - menuitem "Herramientas" [ref=f1e704] [cursor=pointer]
+        - menuitem "Activar asistente de bases de datos con IA" [ref=f1e711] [cursor=pointer]
+      - generic "Perfil" [ref=f1e715] [cursor=pointer]: cbadmin
+      - menubar [ref=f1e719]:
+        - menuitem "Atajos de teclado" [ref=f1e720] [cursor=pointer]
+        - menuitem "Configuración" [ref=f1e724] [cursor=pointer]
+    - main [ref=f1e728]:
+      - generic [ref=f1e729]:
+        - generic [ref=f1e731]:
+          - tablist "Left Side Bar" [ref=f1e732]
+          - group
+          - tabpanel "Explorador" [ref=f1e734]:
+            - generic [ref=f1e736]:
+              - generic [ref=f1e738]:
+                - button "Configuración" [ref=f1e739] [cursor=pointer]
+                - menubar [ref=f1e744]:
+                  - menuitem "Nueva carpeta" [ref=f1e745] [cursor=pointer]
+                  - menuitem "Nueva conexión" [ref=f1e752] [cursor=pointer]
+                  - menuitem "Contraer todo (SHIFT + CTRL + /)" [ref=f1e1407] [cursor=pointer]
+                - button "Actualizar" [ref=f1e759] [cursor=pointer]
+              - generic [ref=f1e789]:
+                - generic "Shared" [ref=f1e791]
+                - generic [ref=f1e793]:
+                  - generic [ref=f1e795]:
+                    - button "Expandir" [ref=f1e796] [cursor=pointer]
+                    - 'generic "Nombre: SQL Server Data Mart (salud cerebral)" [ref=f1e799]': SQL Server Data Mart (salud cerebral)
+                    - button "Acciones de SQL Server Data Mart (salud cerebral)" [ref=f1e1437] [cursor=pointer]
+                  - generic [ref=f1e801]:
+                    - generic [ref=f1e802]:
+                      - button "Expandir" [expanded] [ref=f1e803] [cursor=pointer]
+                      - 'generic "Nombre: SQL Server OLTP (salud cerebral)" [ref=f1e806]': SQL Server OLTP (salud cerebral)
+                    - generic [ref=f1e1413]:
+                      - generic [ref=f1e1415]:
+                        - button "Expandir" [ref=f1e1416] [cursor=pointer]
+                        - generic "Bases de Datos" [ref=f1e1419]
+                      - generic [ref=f1e1422]:
+                        - button "Expandir" [ref=f1e1423] [cursor=pointer]
+                        - generic "Seguridad" [ref=f1e1426]
+        - generic [ref=f1e768]:
+          - button [ref=f1e769] [cursor=pointer]
+          - button [ref=f1e771] [cursor=pointer]
+        - generic [ref=f1e776]:
+          - generic [ref=f1e996]:
+            - tablist [ref=f1e997]:
+              - tab "sql-1" [selected] [ref=f1e998]
+            - group [ref=f1e1003]:
+              - generic [ref=f1e1006]:
+                - button "Cerrar" [ref=f1e1007] [cursor=pointer]
+                - button "Tab menu" [ref=f1e1010]:
+                  - generic [ref=f1e1011] [cursor=pointer]
+            - generic "sql-1" [ref=f1e1520]:
+              - generic [ref=f1e1016]:
+                - generic [ref=f1e1018]:
+                  - generic [ref=f1e1019]:
+                    - menubar [ref=f1e1021]:
+                      - menuitem "Activar asistente de bases de datos con IA" [ref=f1e1022] [cursor=pointer]
+                    - menubar [ref=f1e1027]:
+                      - menuitem "Guardar (CTRL + S)" [ref=f1e1028] [cursor=pointer]
+                      - menuitem "Formatear script SQL (SHIFT + CTRL + F)" [disabled] [ref=f1e1032] [cursor=pointer]
+                      - menuitem "Descargar script SQL" [disabled] [ref=f1e1036] [cursor=pointer]
+                      - menuitem "Subir script SQL" [ref=f1e1040] [cursor=pointer]
+                  - tabpanel [ref=f1e1044]:
+                    - generic [ref=f1e1048]:
+                      - generic [ref=f1e1049]:
+                        - generic [aria-hidden] [ref=f1e1050]:
+                          - generic [ref=f1e1051]: "1"
+                          - generic [ref=f1e1054] [cursor=pointer]
+                        - textbox "Editor SQL" [ref=f1e1057]
+                      - generic [ref=f1e1059]: Ln 1, Col 1, Pos 0
+                - generic [ref=f1e1064]:
+                  - button [ref=f1e1065] [cursor=pointer]
+                  - button [ref=f1e1067] [cursor=pointer]
+                - generic [ref=f1e1069]: Ejecute la consulta con Ctrl+Enter para ver los resultados
+          - generic [ref=f1e1199] [cursor=pointer]
+          - button "Dismiss popup" [ref=f1e1521]
+          - dialog [ref=f1e1201]:
+            - button "Cerrar panel" [ref=f1e1202] [cursor=pointer]
+            - group [ref=f1e1524]:
+              - generic [ref=f1e1525]:
+                - generic [ref=f1e1526]:
+                  - status [ref=f1e1528]
+                  - generic [ref=f1e1530]:
+                    - generic "SQL Server Data Mart (salud cerebral)" [ref=f1e1531]:
+                      - button "SQL Server Data Mart (salud cerebral)"
+                    - generic [ref=f1e1533]:
+                      - button "Cancelar" [disabled]
+                      - button "Probar" [disabled]
+                      - button "Guardar" [disabled]
+                - generic [ref=f1e1538]:
+                  - tablist "Connection form" [ref=f1e1539]:
+                    - tab "Principal" [disabled] [selected]
+                    - tab "Propiedades del controlador" [disabled]
+                    - tab "SSH Tunnel" [disabled]
+                    - tab "SSL" [disabled]
+                    - tab "Acceso" [disabled]
+                    - tab "IA" [disabled]
+                    - tab "Detalles de la conexión" [disabled]
+                    - tab "Configuración avanzada" [disabled]
+                    - tab "Configuración de inicialización" [disabled]
+                  - group [ref=f1e1585]
+                  - tabpanel "Principal" [ref=f1e1606]:
+                    - generic [ref=f1e1688]: Cargando...
+  - alert [ref=f1e1693]:
+    - generic [ref=f1e1696]:
+      - generic [ref=f1e1698]:
+        - heading "Conexión actualizada" [level=2] [ref=f1e1699]
+        - generic [ref=f1e1700]: SQL Server Data Mart (salud cerebral)
+      - generic [ref=f1e1701]: 20:55:06
+    - button "Cerrar" [ref=f1e1704] [cursor=pointer]

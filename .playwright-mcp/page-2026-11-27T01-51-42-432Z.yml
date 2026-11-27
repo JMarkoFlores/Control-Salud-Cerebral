@@ -1,0 +1,34 @@
+- generic [ref=f1e8]:
+  - navigation "Omitir navegación":
+    - button "Ir al navegador" [ref=f1e682] [cursor=pointer]
+    - button "Ir al contenido principal" [ref=f1e683] [cursor=pointer]
+    - button "Atajos de teclado" [ref=f1e684] [cursor=pointer]
+  - banner [ref=f1e685]:
+    - img "CloudBeaver Community ver. 26.2.5" [ref=f1e687] [cursor=pointer]
+    - menubar [ref=f1e689]:
+      - menuitem "Conexión" [ref=f1e690] [cursor=pointer]
+      - menuitem "Abrir editor SQL" [ref=f1e700] [cursor=pointer]
+      - menuitem "Herramientas" [ref=f1e704] [cursor=pointer]
+      - menuitem "Activar asistente de bases de datos con IA" [ref=f1e711] [cursor=pointer]
+    - generic "Perfil" [ref=f1e715] [cursor=pointer]: cbadmin
+    - menubar [ref=f1e719]:
+      - menuitem "Atajos de teclado" [ref=f1e720] [cursor=pointer]
+      - menuitem "Configuración" [ref=f1e724] [cursor=pointer]
+  - main [ref=f1e728]:
+    - generic [ref=f1e729]:
+      - generic [ref=f1e731]:
+        - tablist "Left Side Bar" [ref=f1e732]
+        - group
+        - tabpanel "Explorador" [ref=f1e734]:
+          - generic [ref=f1e736]:
+            - generic [ref=f1e738]:
+              - button "Configuración" [ref=f1e739] [cursor=pointer]
+              - menubar [ref=f1e744]:
+                - menuitem "Nueva carpeta" [ref=f1e745] [cursor=pointer]
+                - menuitem "Nueva conexión" [ref=f1e752] [cursor=pointer]
+              - button "Actualizar" [ref=f1e759] [cursor=pointer]
+            - generic [ref=f1e762]: No hay conexiones. Use el menú superior para configurar una conexión a su base de datos.
+      - generic [ref=f1e768]:
+        - button [ref=f1e769] [cursor=pointer]
+        - button [ref=f1e771] [cursor=pointer]
+      - generic [ref=f1e773]: Cargando...

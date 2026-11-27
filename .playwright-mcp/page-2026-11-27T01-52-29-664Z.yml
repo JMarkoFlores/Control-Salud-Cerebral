@@ -1,0 +1,87 @@
+- generic [ref=f1e6]:
+  - generic [ref=f1e8]:
+    - navigation "Omitir navegación":
+      - button "Ir al navegador" [ref=f1e682] [cursor=pointer]
+      - button "Ir al contenido principal" [ref=f1e683] [cursor=pointer]
+      - button "Atajos de teclado" [ref=f1e684] [cursor=pointer]
+    - banner [ref=f1e685]:
+      - img "CloudBeaver Community ver. 26.2.5" [ref=f1e687] [cursor=pointer]
+      - menubar [ref=f1e689]:
+        - menuitem "Conexión" [ref=f1e690] [cursor=pointer]
+        - menuitem "Abrir editor SQL para SQL Server OLTP (salud cerebral)" [ref=f1e841] [cursor=pointer]
+        - menuitem "Herramientas" [ref=f1e704] [cursor=pointer]
+        - menuitem "Activar asistente de bases de datos con IA" [ref=f1e711] [cursor=pointer]
+      - generic "Perfil" [ref=f1e715] [cursor=pointer]: cbadmin
+      - menubar [ref=f1e719]:
+        - menuitem "Atajos de teclado" [ref=f1e720] [cursor=pointer]
+        - menuitem "Configuración" [ref=f1e724] [cursor=pointer]
+    - main [ref=f1e728]:
+      - generic [ref=f1e729]:
+        - generic [ref=f1e731]:
+          - tablist "Left Side Bar" [ref=f1e732]
+          - group
+          - tabpanel "Explorador" [ref=f1e734]:
+            - generic [ref=f1e736]:
+              - generic [ref=f1e738]:
+                - button "Configuración" [ref=f1e739] [cursor=pointer]
+                - menubar [ref=f1e744]:
+                  - menuitem "Nueva carpeta" [ref=f1e745] [cursor=pointer]
+                  - menuitem "Nueva conexión" [ref=f1e752] [cursor=pointer]
+                - button "Actualizar" [ref=f1e759] [cursor=pointer]
+              - generic [ref=f1e789]:
+                - generic "Shared" [ref=f1e791]
+                - generic [ref=f1e793]:
+                  - generic [ref=f1e795]:
+                    - button "Expandir" [ref=f1e796] [cursor=pointer]
+                    - 'generic "Nombre: SQL Server Data Mart (salud cerebral)" [ref=f1e799]': SQL Server Data Mart (salud cerebral)
+                  - generic [ref=f1e802]:
+                    - button "Expandir" [ref=f1e803] [cursor=pointer]
+                    - 'generic "Nombre: SQL Server OLTP (salud cerebral)" [ref=f1e806]': SQL Server OLTP (salud cerebral)
+                    - button "Acciones de SQL Server OLTP (salud cerebral)" [ref=f1e846] [cursor=pointer]
+        - generic [ref=f1e768]:
+          - button [ref=f1e769] [cursor=pointer]
+          - button [ref=f1e771] [cursor=pointer]
+        - generic [ref=f1e808]:
+          - generic [ref=f1e812]: CloudBeaver Community
+          - generic [ref=f1e814]:
+            - heading "Iniciar" [level=2] [ref=f1e815]
+            - generic [ref=f1e816]:
+              - generic "Crear una nueva conexión" [ref=f1e817] [cursor=pointer]:
+                - generic [ref=f1e821]:
+                  - text: Nueva conexión
+                  - generic [ref=f1e822]: Crear una nueva conexión
+              - generic "Abrir editor SQL" [ref=f1e823] [cursor=pointer]:
+                - generic [ref=f1e827]:
+                  - text: SQL
+                  - generic [ref=f1e828]: Abrir editor SQL
+              - link "Documentación Aprenda a usar CloudBeaver" [ref=f1e829] [cursor=pointer]:
+                - /url: https://dbeaver.com/docs/cloudbeaver/26.2/
+                - generic [ref=f1e833]:
+                  - text: Documentación
+                  - generic [ref=f1e834]: Aprenda a usar CloudBeaver
+              - generic "Activar asistente de bases de datos con IA" [ref=f1e835] [cursor=pointer]:
+                - generic [ref=f1e839]:
+                  - text: Chat de IA
+                  - generic [ref=f1e840]: Activar asistente de bases de datos con IA
+  - generic:
+    - button "Dismiss popup" [ref=f1e872]
+    - dialog [ref=f1e873]:
+      - banner "Nueva conexión" [ref=f1e874]:
+        - heading "Nueva conexión" [level=3] [ref=f1e876]
+      - generic [ref=f1e880]:
+        - generic [ref=f1e882]:
+          - searchbox [active] [ref=f1e885]
+          - button "Buscar..." [ref=f1e887] [cursor=pointer]
+        - generic [ref=f1e891]:
+          - generic "IBM Db2 for Linux/Unix/Windows driver" [ref=f1e892] [cursor=pointer]: Db2 for LUW
+          - generic "MariaDB JDBC driver" [ref=f1e896] [cursor=pointer]: MariaDB
+          - generic "Driver for MySQL 8 and later" [ref=f1e900] [cursor=pointer]: MySQL
+          - generic "Oracle JDBC driver" [ref=f1e904] [cursor=pointer]: Oracle
+          - generic "PostgreSQL standard driver" [ref=f1e908] [cursor=pointer]: PostgreSQL
+          - generic "Microsoft JDBC Driver for SQL Server (MSSQL)" [ref=f1e912] [cursor=pointer]: SQL Server
+          - generic "Kyuubi Thrift Server connector" [ref=f1e916] [cursor=pointer]: Apache Kyuubi
+          - generic "Official ClickHouse driver (server version 21.3+)" [ref=f1e920] [cursor=pointer]: ClickHouse
+          - generic "IBM Db2 driver for IBM i (replacement for iSeries and AS/400)" [ref=f1e924] [cursor=pointer]: Db2 for IBM i
+          - generic "Firebird Jaybird driver" [ref=f1e928] [cursor=pointer]: Firebird
+          - generic "LibSQL DBeaver JDBC driver. Works with standalone LibSQL server and with Turso." [ref=f1e932] [cursor=pointer]: LibSQL
+          - generic "Trino JDBC driver, newer replacement for PrestoSQL" [ref=f1e936] [cursor=pointer]: Trino
