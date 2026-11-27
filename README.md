@@ -157,52 +157,144 @@ pnpm dev
 
 Abre tu navegador en: **`http://localhost:5173`**
 
+### Paso 5: Levantar ambas aplicaciones y ambas bases con Docker
+
+El monorepo tiene dos aplicaciones: la transaccional y el dashboard dimensional. Con Docker se levantan las dos y una sola instancia SQL Server con dos bases (`prevencion_cognitiva_oltp` y `prevencion_cognitiva_mart`):
+
+```bash
+cp .env.example .env
+# Completar MSSQL_SA_PASSWORD, JWT_SECRET y las variables BI.
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env up -d --build
+```
+
+- Transaccional: `http://localhost:8080`
+- Dashboard BI: `http://localhost:8081`
+- SQL Server: `localhost:1433`
+
+`db-init` crea/verifica el OLTP y `db-mart-init` ejecuta el ETL `01`–`05` y crea el login `bi_lector`. Si `SEED_DATA=false`, el dashboard mostrará exactamente los participantes que existan en el OLTP; no carga datos demo.
+
+### Paso 6: Dashboard BI con datos reales
+
+```bash
+cd dashboard-bi/backend
+cp .env.example .env
+# DATA_SOURCE=sqlserver, BI_DB_*, ADMIN_*, JWT_SECRET
+pnpm install --frozen-lockfile
+pnpm hash -- "TuContraseñaSegura"   # copiar el hash a ADMIN_PASSWORD_HASH
+pnpm verify:sql
+pnpm dev
+```
+
+En otra terminal:
+
+```bash
+cd dashboard-bi/frontend
+pnpm install --frozen-lockfile
+pnpm dev
+```
+
+Abre `http://localhost:5174`. Más detalle en `dashboard-bi/README.md`.
+
 ---
 
 ## 6. Quickstart de Despliegue en VPS (Dokploy)
 
-Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1433`. Ningún puerto se publica al host; solo el frontend tiene dominio HTTPS.
+Topología: `Traefik → frontend / bi-frontend (nginx :80) → backend :4000 / bi-backend :4001 → sqlserver :1433`. Una sola instancia de SQL Server contiene las dos bases: `prevencion_cognitiva_oltp` y `prevencion_cognitiva_mart`. Ningún puerto se publica al host; la exposición se define en **Domains**.
 
 ### 6.1 Prerrequisitos
-- VPS con **4 GB de RAM mínimo** (SQL Server 2022 reserva ~1.5 GB).
-- DNS: registro `A` de `saludcerebral.giansmd.dev` hacia la IP del VPS. Si el dominio está en Cloudflare, dejar la nube en **DNS only** hasta que Let's Encrypt emita el certificado.
-- Repositorio privado `giansmd/Control-Salud-Cerebral-VPS` (el repo público original queda como `upstream`).
+- VPS Linux x86-64 con **4 GB de RAM mínimo** (SQL Server 2022 reserva ~1.5 GB). Para datos reales se recomiendan 8 GB.
+- DNS: registros `A` de `saludcerebral.giansmd.dev` y `bi-saludcerebral.giansmd.dev` hacia la IP del VPS. Si el dominio está en Cloudflare, dejar la nube en **DNS only** hasta que Let's Encrypt emita el certificado.
+- Repositorio privado en Dokploy. El repo público original queda como `upstream`.
+- Dokploy con Docker Compose v2.20 o superior (por el `include` de `docker-compose.prod.yml`). Si tu versión no lo soporta, genera un compose único con `docker compose -f docker-compose.prod.yml config > docker-compose.dokploy.yml` y usa ese archivo.
 
 ### 6.2 Variables de entorno en Dokploy
 | Variable | Ejemplo / valor |
 | :--- | :--- |
 | `MSSQL_SA_PASSWORD` | contraseña fuerte, mínimo 8 caracteres con mayúscula, minúscula, número y símbolo |
-| `JWT_SECRET` | cadena aleatoria de 32+ caracteres (nunca reutilizar el ejemplo del repo) |
-| `CORS_ORIGINS` | vacío (solo mismo origen); lista por comas solo si el frontend vive en otro dominio |
-| `SEED_DATA` | `true` solo para la primera carga de datos demo; luego `false` |
-| `DEMO_LOGIN_ENABLED` | `true` para mostrar y habilitar los botones de acceso demo (sin contraseñas en el cliente) |
-| `RESET_DB` | `true` para eliminar ambas bases antes de reinicializar; dejar `false` en operación normal |
-| `DB_DATABASE` | `prevencion_cognitiva_oltp` |
-| `MSSQL_MEMORY_LIMIT_MB` | `1536` |
+| `MSSQL_PID` | `Developer` |
+| `MSSQL_MEMORY_LIMIT_MB` | `1536` (o `2048` si el VPS tiene 8 GB) |
 | `TZ` | `America/Lima` |
+| `JWT_SECRET` | cadena aleatoria de 32+ caracteres para la app transaccional |
+| `JWT_EXPIRES_IN` | `7d` |
+| `CORS_ORIGINS` | vacío (solo mismo origen); lista por comas solo si el frontend vive en otro dominio |
+| `DEMO_LOGIN_ENABLED` | `true` solo si quieres mostrar los botones de acceso demo; `false` en producción real |
+| `DB_DATABASE` | `prevencion_cognitiva_oltp` |
+| `SEED_DATA` | `false` en operación real; `true` solo para la primera carga demo |
+| `RESET_DB` | `false`. Con `true`, el siguiente despliegue elimina OLTP y Data Mart |
+| `RESET_MART` | `false`. Con `true`, el siguiente despliegue elimina y reconstruye el Data Mart |
+| `BI_DB_USER` | `bi_lector` |
+| `BI_DB_PASSWORD` | contraseña fuerte del login de solo lectura; obligatoria |
+| `BI_ADMIN_USER` | usuario administrador único del dashboard |
+| `BI_ADMIN_PASSWORD_HASH` | hash bcrypt del administrador, entre comillas simples por los `$` |
+| `BI_JWT_SECRET` | secreto JWT propio del dashboard, 32+ caracteres |
+| `BI_JWT_EXPIRES_IN` | `8h` |
+| `VITE_GOOGLE_MAPS_API_KEY` | opcional; clave pública restringida al subdominio del dashboard |
 
-### 6.3 Pasos
-1. En Dokploy: **Create Project → Compose**, conectar el repo privado y usar `docker-compose.prod.yml`.
-2. Pegar las variables de la tabla en **Environment** y desplegar. Se construyen `sqlserver`, `backend` y `frontend`.
-3. **Domains**: dos entradas sobre el mismo host.
-   - `/` → servicio `frontend`, container port `80`.
-   - `/api` → servicio `backend`, container port `4000`.
-   Traefik resuelve por prefijo y evita depender del proxy interno de nginx.
-4. Inicializar ambas bases (OLTP, seed opcional y Data Mart):
-   ```bash
-   docker compose --profile init run --rm db-init
-   ```
-   En Dokploy, el job se lanza como despliegue temporal con el campo **Command**:
-   ```text
-   compose -p <appName> -f ./docker-compose.prod.yml --profile init run --rm db-init
-   ```
-   El job ejecuta en orden `bd-transaccional.sql`, `seed-data.sql` (si `SEED_DATA=true`), `01`-`05` de `bd-dim-sql/` y falla con `-b` ante el primer error. Para reinstalar desde cero usar `RESET_DB=true` (elimina ambas bases antes de cargar).
-5. Verificar: `https://saludcerebral.giansmd.dev/api/v1/health` y login demo.
+Notas:
 
-### 6.4 Actualizar el Data Mart
-En **Reportes Analíticos** (rol ADMIN) está el botón **Actualizar Data Mart**. Ejecuta `02_ETL.sql` (vistas de preparación, dimensiones y hechos) desde la base transaccional y devuelve filas cargadas, duración y fecha de corte. El endpoint es `POST /api/v1/admin/datamart/refresh` y rechaza ejecuciones simultáneas.
+- `BI_DB_PASSWORD` se usa para crear/actualizar el login SQL `bi_lector`. Debe cumplir la política de SQL Server (`CHECK_POLICY=ON`), porque `deploy/bi-login.sql` la aplica.
+- Las variables BI no bloquean la app transaccional: si faltan, `db-mart-init` y `bi-backend` fallan y el dashboard no arranca, pero `sqlserver`, `db-init`, `backend` y `frontend` siguen funcionando.
+- El hash bcrypt contiene `$`; en Dokploy guárdalo entre comillas simples, por ejemplo `'$2b$12$...'`. No pegues la contraseña en lugar del hash.
+- Genera el hash con:
+  ```bash
+  cd dashboard-bi/backend
+  pnpm hash -- "TuContraseñaSegura"
+  ```
+- No guardes secretos en el repositorio. `.env` está en `.gitignore` y `.dockerignore`.
+- En el compose, la BD dimensional está en la misma instancia `sqlserver` y se llama `prevencion_cognitiva_mart`. No necesitas una variable `BI_DB_SERVER` en Dokploy.
 
-### 6.5 Panel de bases de datos (CloudBeaver)
+### 6.3 Servicios y orden de arranque
+El compose levanta dos aplicaciones y dos bases:
+
+1. `sqlserver`: una instancia con dos bases.
+2. `db-init` (`INIT_MODE=oltp`): crea `prevencion_cognitiva_oltp` solo si no existe y, si `SEED_DATA=true`, carga el seed. Es rápido.
+3. `backend`: depende de `db-init`; la app transaccional no espera al ETL dimensional.
+4. `db-mart-init` (`INIT_MODE=mart`): ejecuta `01`–`05` de `bd-dim-sql/`, carga dimensiones y hechos, valida y crea/actualiza el login `BI_DB_USER`. Es automático en cada despliegue.
+5. `bi-backend`: depende de que `db-mart-init` termine correctamente. Si el ETL falla, el dashboard no arranca, pero la app transaccional sigue funcionando.
+6. `frontend` y `bi-frontend`: nginx; cada una tiene su dominio.
+7. `cloudbeaver`: panel de administración de las dos bases; debe quedar protegido con una segunda capa.
+
+Los dos jobs de inicialización usan una imagen propia construida con `deploy/Dockerfile`. Los scripts `bd-sql`, `bd-dim-sql`, `deploy/init.sh` y `deploy/bi-login.sql` viajan dentro de la imagen. Así Dokploy no depende de bind mounts relativos al repositorio, que pueden quedar vacíos cuando AutoDeploy vuelve a clonar.
+
+Comandos locales:
+
+```bash
+# Ambas apps + ambas bases, con puertos locales 8080 (transaccional) y 8081 (BI)
+docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env up -d --build
+
+# Producción / Dokploy
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build
+```
+
+En local, si no quieres usar Docker para las apps, puedes levantar solo SQL Server y los jobs de inicialización con `docker compose -f docker-compose.yml -f docker-compose.dev.yml --env-file .env up -d sqlserver db-init db-mart-init` y ejecutar los Vite/Node por separado. El override de desarrollo publica `1433` para que el backend BI local pueda conectarse.
+
+Si necesitas datos demo:
+
+- Define `SEED_DATA=true` **antes del primer despliegue**. El seed solo se inserta al crear el OLTP.
+- Si el OLTP ya existe, `SEED_DATA` se ignora.
+- En operación real deja `SEED_DATA=false`, `RESET_DB=false` y `RESET_MART=false`.
+
+### 6.4 Domains en Dokploy
+Configura dos subdominios independientes:
+
+- `saludcerebral.giansmd.dev` → servicio `frontend`, puerto interno `80`.
+- `bi-saludcerebral.giansmd.dev` → servicio `bi-frontend`, puerto interno `80`.
+
+No compartas el mismo dominio entre ambas aplicaciones: las dos usan `/api` para backends distintos. El frontend transaccional sigue enrutando `/api` a `backend:4000`; el frontend BI enruta `/api` a `bi-backend:4001`.
+
+Si usas labels manuales de Traefik, agrega `dokploy-network` a los servicios. Si usas la pestaña **Domains** de Dokploy, configura el dominio y redespliega para que Traefik lea los labels.
+
+### 6.5 Actualizar el Data Mart
+- En cada despliegue, `db-mart-init` ejecuta `01`–`05` y recarga los hechos. El dashboard espera a que termine.
+- Desde la app transaccional, el administrador puede usar **Reportes Analíticos → Actualizar Data Mart**. Ejecuta `02_ETL.sql` (vistas de preparación, dimensiones y hechos) y devuelve filas cargadas, duración y fecha de corte. El endpoint es `POST /api/v1/admin/datamart/refresh` y rechaza ejecuciones simultáneas.
+- Para forzar el job manualmente:
+  ```bash
+  docker compose -f docker-compose.prod.yml --env-file .env run --rm db-mart-init
+  ```
+- El dashboard cachea metadatos, filtros y respuestas durante cinco minutos (`CACHE_TTL_MS=300000`). Después de un refresco, espera ese tiempo o reinicia `bi-backend` si necesitas verlo de inmediato.
+- `RESET_MART=true` elimina el Data Mart antes de reconstruirlo. Úsalo solo si el esquema quedó incompatible o si realmente quieres descartar el mart actual.
+
+### 6.6 Panel de bases de datos (CloudBeaver)
 - URL: `https://db-saludcerebral.giansmd.dev` (contenedor `cloudbeaver`, puerto interno 8978).
 - **Riesgo:** el panel maneja credenciales `sa` y está en Internet. Debe tener una segunda capa: basic auth de Traefik o allowlist de IP en el middleware del dominio. Sin eso, cualquiera que descubra el host llega al login del panel.
 - Usuario administrador `cbadmin`; contraseña en el gestor de secretos del equipo, nunca en el repo.
@@ -216,22 +308,38 @@ docker exec -it control-salud-cerebral-lmb9cv-sqlserver-1 bash
 /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -d prevencion_cognitiva_oltp
 ```
 
-### 6.6 Notas
-- `msnodesqlv8` (autenticación Windows) queda como dependencia opcional: en el servidor se usa autenticación SQL con `sa`.
-- Los cambios de esquema se aplican volviendo a ejecutar el job `db-init`; los scripts `01` a `05` son idempotentes.
+### 6.7 Copias de seguridad y recuperación
+- Programa copias de seguridad SQL de `prevencion_cognitiva_oltp` y `prevencion_cognitiva_mart` y almacénalas fuera del VPS. Por ejemplo, desde SQL Server:
+  ```sql
+  BACKUP DATABASE [prevencion_cognitiva_oltp]
+    TO DISK = N'/var/opt/mssql/data/prevencion_cognitiva_oltp.bak' WITH INIT, COMPRESSION;
+  BACKUP DATABASE [prevencion_cognitiva_mart]
+    TO DISK = N'/var/opt/mssql/data/prevencion_cognitiva_mart.bak' WITH INIT, COMPRESSION;
+  ```
+  Copia los `.bak` fuera del contenedor/volumen y rota los nombres para conservar versiones. Comprueba periódicamente que una copia se pueda restaurar.
+- Si `db-init` o `db-mart-init` fallan, consulta sus logs desde el primer error. No se borran datos automáticamente. Corrige la causa y vuelve a desplegar; si la inicialización dejó una base incompleta, revisa el estado de las bases o restaura una copia antes de elegir una reparación. No uses `RESET_DB=true` salvo que realmente quieras borrar OLTP y Data Mart.
 
-### 6.7 Seguridad (repo público)
+### 6.8 Notas
+- `msnodesqlv8` (autenticación Windows) queda como dependencia opcional: en el servidor se usa autenticación SQL con `sa`.
+- El VPS debe ser Linux x86-64 y contar con al menos 4 GB de RAM; 8 GB es recomendable para datos reales.
+- Los cambios del Data Mart se aplican al redesplegar; las tablas de hechos se recargan en una transacción y las dimensiones se actualizan por sus identificadores de origen.
+- El dashboard BI solo lee las vistas del esquema `bi` y usa `bi_lector`, que solo tiene `SELECT` sobre ese esquema. No consulta el OLTP ni `DIM_PERSONA` directamente.
+- El dashboard es solo para administrador; no tiene registro ni roles de titular.
+- Los scripts del Data Mart son `01`–`05`. El dashboard no necesita los antiguos `02_Vistas_ETL`, `03_ETL_Dimensiones` y `04_ETL_Hechos`: `main` los unificó en `02_ETL.sql`.
+- Si `db-mart-init` falla, `bi-backend` no arranca; la app transaccional no se ve afectada.
+
+### 6.9 Seguridad (repo público)
 Este repositorio es público: nada de lo que se commitea aquí es secreto.
 
-- **Secretos solo en Dokploy / `.env` local.** `JWT_SECRET` (32+ caracteres aleatorios) y `MSSQL_SA_PASSWORD` nunca se commitean. `backend/.env` está en `.gitignore` y en `.dockerignore`.
-- **Sin valores por defecto para secretos.** Si falta `JWT_SECRET`, el backend no arranca (fail-closed).
+- **Secretos solo en Dokploy / `.env` local.** `JWT_SECRET`, `MSSQL_SA_PASSWORD`, `BI_DB_PASSWORD`, `BI_ADMIN_PASSWORD_HASH` y `BI_JWT_SECRET` nunca se commitean. `backend/.env` está en `.gitignore` y en `.dockerignore`.
+- **Sin valores por defecto para secretos.** Si falta `JWT_SECRET`, el backend no arranca (fail-closed). El dashboard BI también falla si falta su configuración.
 - **CORS cerrado:** solo mismo origen. Si se necesita otro dominio, declararlo en `CORS_ORIGINS`.
-- **Rate limiting:** 300 req/15 min por IP en la API, 10 intentos/15 min en login y registro, 30/15 min en el chatbot.
+- **Rate limiting:** 300 req/15 min por IP en la API, 10 intentos/15 min en login y registro, 30/15 min en el chatbot. El dashboard BI tiene su propio límite de login.
 - **Contraseñas:** mínimo 8 caracteres con letra y número; hash `bcrypt` con costo 12.
 - **Panel de BD (CloudBeaver):** maneja credenciales `sa`; protegerlo con basic auth de Traefik o allowlist de IP. Nunca dejarlo sin segunda capa.
 - **Cuentas demo:** las contraseñas del seed son públicas. No cargar `SEED_DATA=true` en producción o cambiar las claves de inmediato.
 - **Historial de git:** versiones antiguas del repo contienen un `JWT_SECRET` de ejemplo. No reutilizar ese valor; rotar el secreto de producción invalida todas las sesiones.
-- **Cabeceras:** Helmet en la API y CSP, HSTS, `X-Frame-Options`, `nosniff`, `Referrer-Policy` y `Permissions-Policy` en nginx.
+- **Cabeceras:** Helmet en la API transaccional y CSP, HSTS, `X-Frame-Options`, `nosniff`, `Referrer-Policy` y `Permissions-Policy` en nginx. El frontend BI todavía no replica todas las cabeceras; si se agrega CSP, debe permitir Google Charts (`https://www.gstatic.com`).
 
 ---
 
@@ -298,5 +406,16 @@ Control-Salud-Cerebral/
 │   ├── package.json
 │   ├── tailwind.config.js
 │   └── vite.config.ts
+├── bd-dim-sql/                    # Data Mart: 01 creación, 02 ETL, 03 vistas, 04 validación, 05 reportes
+├── dashboard-bi/                  # Segunda aplicación: dashboard dimensional
+│   ├── backend/                   # Express + mssql, solo lectura de las vistas bi.*
+│   └── frontend/                  # React + Vite + Google Charts
+├── deploy/
+│   ├── Dockerfile                 # Imagen one-shot con los scripts de inicialización
+│   ├── init.sh                    # Modos oltp/mart/all
+│   └── bi-login.sql               # Login SQL de solo lectura para el dashboard
+├── docker-compose.yml             # Ambas apps + ambas bases
+├── docker-compose.dev.yml         # Puertos locales 8080/8081
+├── docker-compose.prod.yml        # Dokploy, sin puertos publicados
 └── README.md                      # Documentación completa del sistema
 ```

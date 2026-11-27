@@ -5,9 +5,17 @@ include:
 services:
   sqlserver:
     restart: unless-stopped
+  db-init:
+    restart: "no"
+  db-mart-init:
+    restart: "no"
   backend:
     restart: unless-stopped
   frontend:
+    restart: unless-stopped
+  bi-backend:
+    restart: unless-stopped
+  bi-frontend:
     restart: unless-stopped
   # Panel de administración de BD. Debe quedar protegido con una segunda capa
   # (basic auth de Traefik o allowlist de IP); nunca abierto sin auth.
