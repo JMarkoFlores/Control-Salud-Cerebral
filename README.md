@@ -219,7 +219,7 @@ Topología: `Traefik → frontend / bi-frontend (nginx :80) → backend :4000 / 
 | `CORS_ORIGINS` | vacío (solo mismo origen); lista por comas solo si el frontend vive en otro dominio |
 | `DEMO_LOGIN_ENABLED` | `true` solo si quieres mostrar los botones de acceso demo; `false` en producción real |
 | `DB_DATABASE` | `prevencion_cognitiva_oltp` |
-| `SEED_DATA` | `false` en operación real; `true` solo para la primera carga demo |
+| `SEED_DATA` | `true` para cargar/actualizar los datos demo en cada despliegue; `false` para datos reales |
 | `RESET_DB` | `false`. Con `true`, el siguiente despliegue elimina OLTP y Data Mart |
 | `RESET_MART` | `false`. Con `true`, el siguiente despliegue elimina y reconstruye el Data Mart |
 | `BI_DB_USER` | `bi_lector` |
@@ -247,7 +247,7 @@ Notas:
 El compose levanta dos aplicaciones y dos bases:
 
 1. `sqlserver`: una instancia con dos bases.
-2. `db-init` (`INIT_MODE=oltp`): crea `prevencion_cognitiva_oltp` solo si no existe y, si `SEED_DATA=true`, carga el seed. Es rápido.
+2. `db-init` (`INIT_MODE=oltp`): crea `prevencion_cognitiva_oltp` solo si no existe y, si `SEED_DATA=true`, ejecuta el seed idempotente aunque el OLTP ya exista. Es rápido.
 3. `backend`: depende de `db-init`; la app transaccional no espera al ETL dimensional.
 4. `db-mart-init` (`INIT_MODE=mart`): ejecuta `01`–`05` de `bd-dim-sql/`, carga dimensiones y hechos, valida y crea/actualiza el login `BI_DB_USER`. Es automático en cada despliegue.
 5. `bi-backend`: depende de que `db-mart-init` termine correctamente. Si el ETL falla, el dashboard no arranca, pero la app transaccional sigue funcionando.
@@ -270,8 +270,7 @@ En local, si no quieres usar Docker para las apps, puedes levantar solo SQL Serv
 
 Si necesitas datos demo:
 
-- Define `SEED_DATA=true` **antes del primer despliegue**. El seed solo se inserta al crear el OLTP.
-- Si el OLTP ya existe, `SEED_DATA` se ignora.
+- Para la demo define `SEED_DATA=true` desde el primer despliegue. El seed es idempotente y se ejecuta también si el OLTP ya existe, por lo que puedes redeployar para recargar/actualizar los datos demo sin duplicados.
 - En operación real deja `SEED_DATA=false`, `RESET_DB=false` y `RESET_MART=false`.
 - El seed de demostración incluye 6 semanas (5 cerradas + la actual) y 2 meses de metas, actividad, contacto, confirmaciones y resultados clínicos para Carlos, María y Jorge. Con `SEED_DATA=true` el dashboard muestra CAF, CCS y FCM desde el primer despliegue.
 

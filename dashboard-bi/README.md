@@ -70,7 +70,7 @@ usa la lista de `.env.example` en la raíz del repositorio o
 | `JWT_SECRET` | Secreto JWT de la app transaccional. |
 | `DEMO_LOGIN_ENABLED` | `true` solo para demo; `false` en producción real. |
 | `DB_DATABASE` | `prevencion_cognitiva_oltp`. |
-| `SEED_DATA` | `false` en operación real. |
+| `SEED_DATA` | `true` para cargar/actualizar los datos demo en cada despliegue; `false` para datos reales. |
 | `RESET_DB` / `RESET_MART` | `false`; con `true` borran datos. |
 | `BI_DB_USER` | Login SQL de lectura, por defecto `bi_lector`. |
 | `BI_DB_PASSWORD` | Contraseña de ese login; obligatoria. |
@@ -94,7 +94,7 @@ Server:
 
 - `sqlserver`: `prevencion_cognitiva_oltp` + `prevencion_cognitiva_mart`.
 - `db-init` (`INIT_MODE=oltp`): crea el OLTP solo si no existe y carga el seed
-  si `SEED_DATA=true`. Es rápido y la app transaccional espera solo a este job.
+  si `SEED_DATA=true`. El seed es idempotente y se ejecuta también sobre un OLTP existente. Es rápido y la app transaccional espera solo a este job.
 - `backend` / `frontend`: aplicación transaccional, sin cambios de contrato.
 - `db-mart-init` (`INIT_MODE=mart`): ejecuta `01`–`05` de `bd-dim-sql/`, carga
   dimensiones y hechos, valida y crea/actualiza el login `BI_DB_USER`. Es
@@ -124,8 +124,7 @@ vistas `bi.v_IndicadoresSemanales`, `bi.v_IndicadorFCM` y
 usa filtros parametrizados, pool, timeout y caché de cinco minutos.
 
 Deja `RESET_DB=false` y `RESET_MART=false`: con `true`, el siguiente despliegue
-borrará datos de las bases indicadas. Define `SEED_DATA=true` antes del primer
-despliegue solo si necesitas datos demo; el seed solo se inserta al crear OLTP.
+borrará datos de las bases indicadas. Define `SEED_DATA=true` si necesitas datos demo; el seed es idempotente y se ejecuta también sobre un OLTP existente.
 Si `db-init` o `db-mart-init` fallan, revisa los logs y repara o restaura la
 base; no se borran datos automáticamente para recuperarse de un fallo parcial.
 

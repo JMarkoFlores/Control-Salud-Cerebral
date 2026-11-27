@@ -56,12 +56,15 @@ init_oltp() {
   fi
 
   if database_exists "prevencion_cognitiva_oltp"; then
-    echo "[db-init] OLTP existente: se omite creación y seed"
-    return
+    echo "[db-init] OLTP existente: se omite creación"
+  else
+    run /scripts/bd-sql/bd-transaccional.sql
   fi
 
-  run /scripts/bd-sql/bd-transaccional.sql
+  # En modo demostración el seed se ejecuta también sobre una base existente.
+  # Es idempotente: sus INSERT usan IF NOT EXISTS / NOT EXISTS.
   if [ "${SEED_DATA:-false}" = "true" ]; then
+    echo "[db-init] SEED_DATA=true: ejecutando seed de demostración (idempotente)"
     run /scripts/bd-sql/seed-data.sql
   fi
 }
