@@ -20,6 +20,44 @@ services:
       retries: 20
       start_period: 40s
 
+  # Job rápido: solo crea la base transaccional y, si SEED_DATA=true, el seed.
+  # La aplicación transaccional espera a este job, no al ETL dimensional.
+  db-init:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: control-salud-cerebral-db-init:local
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?define MSSQL_SA_PASSWORD}
+      INIT_MODE: oltp
+      SEED_DATA: ${SEED_DATA:-false}
+      RESET_DB: ${RESET_DB:-false}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    restart: "no"
+
+  # Job del Data Mart: ejecuta 01-05, carga dimensiones/hechos y crea el login BI.
+  # El backend BI espera a que termine; el backend transaccional no.
+  db-mart-init:
+    build:
+      context: .
+      dockerfile: deploy/Dockerfile
+    image: control-salud-cerebral-db-init:local
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?define MSSQL_SA_PASSWORD}
+      INIT_MODE: mart
+      RESET_MART: ${RESET_MART:-false}
+      BI_DB_USER: ${BI_DB_USER:-bi_lector}
+      BI_DB_PASSWORD: ${BI_DB_PASSWORD:-}
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
+    restart: "no"
+
+  # Aplicación transaccional.
   backend:
     build:
       context: .
@@ -38,6 +76,7 @@ services:
       DB_TRUST_SERVER_CERTIFICATE: "true"
       JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
       DEMO_LOGIN_ENABLED: ${DEMO_LOGIN_ENABLED:-false}
       DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@saludcerebral.pe}
       DEMO_TITULAR_EMAIL: ${DEMO_TITULAR_EMAIL:-carlos.mendoza@gmail.com}
@@ -45,6 +84,8 @@ services:
     depends_on:
       sqlserver:
         condition: service_healthy
+      db-init:
+        condition: service_completed_successfully
     healthcheck:
       test:
         [
@@ -66,23 +107,51 @@ services:
       backend:
         condition: service_healthy
 
-  # Inicialización única de ambas bases (OLTP, seed y Data Mart).
-  # Ejecutar a mano: docker compose --profile init run --rm db-init
-  db-init:
-    image: mcr.microsoft.com/mssql/server:2022-latest
-    profiles: ["init"]
+  # Dashboard BI: solo lectura del Data Mart.
+  bi-backend:
+    build:
+      context: .
+      dockerfile: dashboard-bi/backend/Dockerfile
     environment:
-      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?define MSSQL_SA_PASSWORD}
-      SEED_DATA: ${SEED_DATA:-false}
-      RESET_DB: ${RESET_DB:-false}
-      RESET_MART: ${RESET_MART:-false}
-    entrypoint: ["/bin/bash", "/scripts/init.sh"]
-    volumes:
-      - ./bd-sql:/scripts/bd-sql:ro
-      - ./bd-dim-sql:/scripts/bd-dim-sql:ro
-      - ./deploy/init.sh:/scripts/init.sh:ro
+      NODE_ENV: production
+      PORT: 4001
+      TZ: ${TZ:-America/Lima}
+      DATA_SOURCE: sqlserver
+      BI_DB_SERVER: sqlserver
+      BI_DB_PORT: 1433
+      BI_DB_DATABASE: prevencion_cognitiva_mart
+      BI_DB_USER: ${BI_DB_USER:-bi_lector}
+      BI_DB_PASSWORD: ${BI_DB_PASSWORD:-}
+      BI_DB_ENCRYPT: "true"
+      BI_DB_TRUST_SERVER_CERTIFICATE: "true"
+      ADMIN_USER: ${BI_ADMIN_USER:-}
+      ADMIN_PASSWORD_HASH: ${BI_ADMIN_PASSWORD_HASH:-}
+      JWT_SECRET: ${BI_JWT_SECRET:-}
+      JWT_EXPIRES_IN: ${BI_JWT_EXPIRES_IN:-8h}
     depends_on:
-      sqlserver:
+      db-mart-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  bi-frontend:
+    build:
+      context: .
+      dockerfile: dashboard-bi/frontend/Dockerfile
+      args:
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+    depends_on:
+      bi-backend:
         condition: service_healthy
 
   # Administración web de las dos bases (CloudBeaver). Solo accesible con dominio propio.

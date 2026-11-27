@@ -1,4 +1,7 @@
 # Solo para pruebas locales en la laptop. No usar en Dokploy.
+# Las dos aplicaciones quedan accesibles por HTTP:
+#   transaccional -> http://localhost:8080
+#   dashboard BI  -> http://localhost:8081
 services:
   sqlserver:
     ports:
@@ -6,3 +9,12 @@ services:
   backend:
     ports:
       - "4000:4000"
+  frontend:
+    ports:
+      - "8080:80"
+  bi-backend:
+    ports:
+      - "4001:4001"
+  bi-frontend:
+    ports:
+      - "8081:80"
