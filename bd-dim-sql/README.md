@@ -19,21 +19,19 @@ SELECT @@VERSION AS version_sql_server;
 
 Si el primer valor es `NULL`, crea la base transaccional con el script definitivo de tu compañero (una sola vez). No vuelvas a ejecutar su script de creación de tablas si ya existe el OLTP. Comprueba que las tablas `persona`, `ubicacion`, `meta_semanal`, `sesion_fisica`, `contacto_social`, `confirmacion_diaria`, `control_programado` y `resultado_control` existan.
 
-Abre y ejecuta los siete archivos uno por uno en SSMS. No continúes si aparece un error. Cada archivo comienza con `USE` de la base que corresponde.
+Abre y ejecuta los cinco archivos uno por uno en SSMS. No continúes si aparece un error. Cada archivo comienza con `USE` de la base que corresponde.
 
 | Orden | Archivo | Base desde donde se ejecuta | Finalidad |
 |---|---|---|---|
 | 01 | `01_Crear_DataMart.sql` | Data Mart (creación desde master) | Crear las seis dimensiones, dos hechos, relaciones e índices. |
-| 02 | `02_Vistas_ETL.sql` | Transaccional | Preparar los datos de dimensiones y hechos mediante vistas dbo. |
-| 03 | `03_ETL_Dimensiones.sql` | Transaccional | Ejecutar los seis MERGE directamente hacia el Data Mart. |
-| 04 | `04_ETL_Hechos.sql` | Transaccional | Ejecutar DELETE + INSERT SELECT desde las vistas de hechos del OLTP. |
-| 05 | `05_Vistas_Indicadores.sql` | Data Mart | Crear las cinco vistas analíticas de los tres KPI. |
-| 06 | `06_Validacion.sql` | Transaccional | Conciliar las seis medidas y verificar los resultados. |
-| 07 | `07_Reportes_DataMart.sql` | Data Mart | Crear los seis procedimientos de reporte. |
+| 02 | `02_ETL.sql` | Transaccional | Crear las vistas de preparación (PASO 03 interno), cargar las seis dimensiones con MERGE y los dos hechos con DELETE + INSERT (PASO 04 interno). |
+| 03 | `03_Vistas_Indicadores.sql` | Data Mart | Crear las cinco vistas analíticas de los tres KPI. |
+| 04 | `04_Validacion.sql` | Transaccional | Conciliar las seis medidas y verificar los resultados. |
+| 05 | `05_Reportes_DataMart.sql` | Data Mart | Crear los seis procedimientos de reporte. |
 
-**Actualizaciones posteriores:** ejecutar 03 y después 04, en ese orden, desde la base transaccional. Ejecutar 06 para comprobar. No es necesario volver a crear tablas y vistas. No se instala un coordinador ni triggers. El paso 02 añade únicamente vistas al esquema dbo del OLTP, no altera las 17 tablas ni sus registros; los pasos 03 y 04 escriben exclusivamente en el Data Mart.
+**Actualizaciones posteriores:** ejecutar `02_ETL.sql` desde la base transaccional. Ejecutar `04_Validacion.sql` para comprobar. No es necesario volver a crear tablas y vistas. No se instala un coordinador ni triggers. El archivo `02_ETL.sql` añade vistas al esquema dbo del OLTP, no altera las 17 tablas ni sus registros y escribe exclusivamente en el Data Mart.
 
-Después del paso 03 y antes del paso 04 puedes visualizar cómo quedarán los hechos, tal como se prepara una vista en los ejemplos del ingeniero:
+Dentro de `02_ETL.sql`, tras la sección de dimensiones (PASO 03) y antes de la de hechos (PASO 04), puedes visualizar cómo quedarán los hechos, tal como se prepara una vista en los ejemplos del ingeniero:
 
 ```sql
 USE [prevencion_cognitiva_oltp];
@@ -56,11 +54,12 @@ SELECT name AS tabla FROM sys.tables ORDER BY name;
 
 Una instalación limpia de esta versión devuelve exactamente ocho tablas. Las vistas y los procedimientos de `bi` no se cuentan como tablas.
 
-### Actualización de la versión 4 ya instalada
 
-Si ya creaste y cargaste el Data Mart de la versión 4, haz una copia de seguridad y ejecuta primero **`00_Migrar_DataMart_v4_a_v5.sql`**. Esta migración combina nombres y apellidos, renombra `semana_iso` a `semana` y `vigente` a `vigencia`, y retira sólo las columnas dimensionales que no figuran en la Tabla 4. No vuelve a crear tablas, no elimina filas ni modifica las claves; la base transaccional queda intacta. Después ejecuta 01 a 07 en orden para que se actualicen las vistas de origen, el ETL y los reportes. Durante la migración no utilices los visualizadores porque algunas vistas antiguas dependerán de columnas retiradas hasta recrearlas.
+### Data Mart de una versión anterior
 
-Si se trata de una instalación nueva, omite 00 y comienza con 01. No vuelvas a ejecutar la creación incondicional del OLTP si éste ya existe. El paso 06 comprueba los nombres y el orden exactos de las columnas de cada dimensión. Si la consulta de discrepancias no devuelve filas, el modelo coincide con la Tabla 4.
+Si el Data Mart ya existía con un esquema previo, elimínalo antes de continuar (por ejemplo con `RESET_MART=true` en el job `db-init` o `DROP DATABASE [prevencion_cognitiva_mart]`) y ejecuta 01 a 05 en orden. Los datos se recargan desde el OLTP con `02_ETL.sql`; no hay script de migración.
+
+En una instalación nueva comienza directamente con 01. No vuelvas a ejecutar la creación incondicional del OLTP si éste ya existe. El archivo `04_Validacion.sql` comprueba los nombres y el orden exactos de las columnas de cada dimensión: si la consulta de discrepancias no devuelve filas, el modelo coincide con la Tabla 4.
 
 ### Lectura de los scripts y funciones SQL utilizadas
 
@@ -187,7 +186,7 @@ El backend del dashboard debe aplicar autenticación y permisos por titular y ro
 
 ### Reportes del Data Mart (un solo archivo SQL)
 
-`07_Reportes_DataMart.sql` crea los siguientes seis procedimientos. Cada uno se ejecuta por separado. Todos consultan únicamente tablas y vistas del Data Mart y se actualizan con la ejecución del ETL; no se consulta el OLTP desde los reportes. La primera columna `reporte` de cada conjunto identifica su contenido.
+`05_Reportes_DataMart.sql` crea los siguientes seis procedimientos. Cada uno se ejecuta por separado. Todos consultan únicamente tablas y vistas del Data Mart y se actualizan con la ejecución del ETL; no se consulta el OLTP desde los reportes. La primera columna `reporte` de cada conjunto identifica su contenido.
 
 | Código | Nombre del reporte | Procedimiento | Resultados para el visualizador |
 |---|---|---|---|

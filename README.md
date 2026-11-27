@@ -196,11 +196,11 @@ Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1
    ```text
    compose -p <appName> -f ./docker-compose.prod.yml --profile init run --rm db-init
    ```
-   El job ejecuta en orden `bd-transaccional.sql`, `seed-data.sql` (si `SEED_DATA=true`), `01`–`07` de `bd-dim-sql/` y falla con `-b` ante el primer error. Para reinstalar desde cero usar `RESET_DB=true` (elimina ambas bases antes de cargar).
+   El job ejecuta en orden `bd-transaccional.sql`, `seed-data.sql` (si `SEED_DATA=true`), `01`-`05` de `bd-dim-sql/` y falla con `-b` ante el primer error. Para reinstalar desde cero usar `RESET_DB=true` (elimina ambas bases antes de cargar).
 5. Verificar: `https://saludcerebral.giansmd.dev/api/v1/health` y login demo.
 
 ### 6.4 Actualizar el Data Mart
-En **Reportes Analíticos** (rol ADMIN) está el botón **Actualizar Data Mart**. Ejecuta el ETL `03` (dimensiones) y `04` (hechos) desde la base transaccional y devuelve filas cargadas, duración y fecha de corte. El endpoint es `POST /api/v1/admin/datamart/refresh` y rechaza ejecuciones simultáneas.
+En **Reportes Analíticos** (rol ADMIN) está el botón **Actualizar Data Mart**. Ejecuta `02_ETL.sql` (vistas de preparación, dimensiones y hechos) desde la base transaccional y devuelve filas cargadas, duración y fecha de corte. El endpoint es `POST /api/v1/admin/datamart/refresh` y rechaza ejecuciones simultáneas.
 
 ### 6.5 Panel de bases de datos (CloudBeaver)
 - URL: `https://db-saludcerebral.giansmd.dev` (contenedor `cloudbeaver`, puerto interno 8978).
@@ -218,7 +218,7 @@ docker exec -it control-salud-cerebral-lmb9cv-sqlserver-1 bash
 
 ### 6.6 Notas
 - `msnodesqlv8` (autenticación Windows) queda como dependencia opcional: en el servidor se usa autenticación SQL con `sa`.
-- Los cambios de esquema se aplican volviendo a ejecutar el job `db-init`; los scripts `01`, `02`, `05` y `07` son idempotentes.
+- Los cambios de esquema se aplican volviendo a ejecutar el job `db-init`; los scripts `01` a `05` son idempotentes.
 
 ### 6.7 Seguridad (repo público)
 Este repositorio es público: nada de lo que se commitea aquí es secreto.

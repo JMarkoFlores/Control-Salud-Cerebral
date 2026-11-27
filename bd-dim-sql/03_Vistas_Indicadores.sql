@@ -1,4 +1,4 @@
--- G1 | PASO 05. VISTAS PARA LOS INDICADORES
+-- G1 | PASO 03. VISTAS PARA LOS INDICADORES
 -- Se calculan CAF, CCS y FCM a partir de M1-M6 del Data Mart.
 -- No se guardan porcentajes en los hechos ni se suman porcentajes de personas.
 -- Las vistas utilizan key_persona como identificador analítico; no exponen nombres ni credenciales.

@@ -1,4 +1,4 @@
--- G1 | PASO 06. VALIDACIÓN DE LA CARGA
+-- G1 | PASO 04. VALIDACIÓN DE LA CARGA
 -- Sólo consultas SELECT: no altera el OLTP ni el Data Mart.
 USE [prevencion_cognitiva_oltp];
 GO
@@ -18,7 +18,7 @@ IF @corte IS NULL
     FROM [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO];
 
 IF @corte IS NULL
-    THROW 50015, N'Primero ejecute el ETL (pasos 03 y 04).', 1;
+    THROW 50015, N'Primero ejecute el ETL (paso 02).', 1;
 
 -- Se usa el día siguiente para incluir todas las horas de la fecha de corte.
 DECLARE @dia_siguiente DATE = DATEADD(DAY, 1, @corte);

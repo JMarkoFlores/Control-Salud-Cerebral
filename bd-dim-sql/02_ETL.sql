@@ -391,3 +391,387 @@ INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_ORIGEN_RESULTADO] AS o
 INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_META] AS dm
     ON dm.id_meta COLLATE DATABASE_DEFAULT = ISNULL(e.id_meta, N'SIN_META');
 GO
+-- G1 | PASO 03. ETL DE DIMENSIONES
+-- dim = destino dimensional; oltp = datos preparados del origen.
+-- MERGE compara los identificadores de origen. No compara las KEY autoincrementables.
+-- Se trabaja desde el OLTP, y el destino se indica con BD.esquema.tabla.
+-- HOLDLOCK protege la coincidencia del MERGE durante la carga.
+USE [prevencion_cognitiva_oltp];
+GO
+
+SET NOCOUNT ON;
+SET LANGUAGE Spanish; -- Nombres de meses y días en español.
+SET DATEFIRST 1;      -- Lunes = 1; domingo = 7.
+
+-- Fecha local de Perú, incluso si SQL Server se encuentra en la nube.
+DECLARE @fecha_corte DATE = CONVERT(DATE, SYSUTCDATETIME() AT TIME ZONE 'UTC' AT TIME ZONE 'SA Pacific Standard Time');
+
+SET XACT_ABORT ON;
+IF @@TRANCOUNT <> 0
+    THROW 50002, N'Ejecute el ETL sin una transacción externa.', 1;
+
+DROP TABLE IF EXISTS #DatosPersona, #Calendario;
+
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    ---------------------------------------------------------------------------
+    -- D1. DIM_PERSONA: preparar la edad y cargar por id_persona.
+    ---------------------------------------------------------------------------
+    -- Se resta un año si aún no llegó el cumpleaños del año del corte.
+    -- DATEADD(YEAR, n, fecha) suma n años a una fecha.
+    SELECT p.id_persona, p.estado, p.fecha_nacimiento, p.fecha_alta,
+           p.sexo, p.nombres,
+           YEAR(@fecha_corte) - YEAR(p.fecha_nacimiento)
+           - CASE
+                 WHEN DATEADD(YEAR, YEAR(@fecha_corte) - YEAR(p.fecha_nacimiento),
+                              p.fecha_nacimiento) > @fecha_corte THEN 1
+                 ELSE 0
+             END AS edad
+    INTO #DatosPersona
+    FROM [dbo].[v_DatosDimPersona] AS p;
+
+    MERGE [prevencion_cognitiva_mart].[dbo].[DIM_PERSONA] WITH (HOLDLOCK) AS dim
+    USING (
+        SELECT id_persona, estado, fecha_nacimiento, fecha_alta, sexo,
+               nombres,
+               CASE
+                   WHEN edad BETWEEN 30 AND 39 THEN N'30-39'
+                   WHEN edad BETWEEN 40 AND 49 THEN N'40-49'
+                   WHEN edad BETWEEN 50 AND 59 THEN N'50-59'
+                   WHEN edad BETWEEN 60 AND 65 THEN N'60-65'
+                   ELSE N'FUERA_RANGO'
+               END AS grupo_edad
+        FROM #DatosPersona
+    ) AS oltp
+    ON dim.id_persona = oltp.id_persona
+    WHEN MATCHED THEN
+        UPDATE SET
+            dim.estado           = oltp.estado,
+            dim.grupo_edad       = oltp.grupo_edad,
+            dim.fecha_nacimiento = oltp.fecha_nacimiento,
+            dim.fecha_alta       = oltp.fecha_alta,
+            dim.sexo             = oltp.sexo,
+            dim.nombres          = oltp.nombres
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (estado, grupo_edad, fecha_nacimiento, fecha_alta, sexo,
+                nombres, id_persona)
+        VALUES (oltp.estado, oltp.grupo_edad, oltp.fecha_nacimiento,
+                oltp.fecha_alta, oltp.sexo, oltp.nombres, oltp.id_persona);
+
+    ---------------------------------------------------------------------------
+    -- D2. DIM_TIEMPO: un calendario continuo, incluso sin registros.
+    ---------------------------------------------------------------------------
+    DECLARE @desde DATE;
+    SELECT @desde = MIN(inicio_seguimiento)
+    FROM [dbo].[v_InicioSeguimiento]
+    WHERE inicio_seguimiento <= @fecha_corte;
+
+    SET @desde = ISNULL(@desde, @fecha_corte);
+    -- DATEFROMPARTS(año, mes, día) construye una fecha.
+    SET @desde = DATEFROMPARTS(YEAR(@desde), MONTH(@desde), 1);
+    -- Retroceder al lunes: si la fecha es martes (2), se resta un día.
+    SET @desde = DATEADD(DAY, 1 - DATEPART(WEEKDAY, @desde), @desde);
+
+    -- WITH construye el calendario: comienza en @desde y añade un día cada vez.
+    ;WITH Calendario AS (
+        SELECT @desde AS fecha
+        UNION ALL
+        SELECT DATEADD(DAY, 1, fecha)
+        FROM Calendario
+        WHERE fecha < @fecha_corte
+    )
+    SELECT fecha
+    INTO #Calendario
+    FROM Calendario
+    OPTION (MAXRECURSION 0); -- Permite calendarios de más de 100 días.
+
+    MERGE [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] WITH (HOLDLOCK) AS dim
+    USING (
+        SELECT YEAR(fecha) AS anio,
+               DATEPART(QUARTER, fecha) AS trimestre,
+               MONTH(fecha) AS mes,
+               DATEPART(ISO_WEEK, fecha) AS semana,
+               DAY(fecha) AS dia,
+               DATENAME(WEEKDAY, fecha) AS dia_semana,
+               fecha AS id_tiempo
+        FROM #Calendario
+    ) AS oltp
+    ON dim.id_tiempo = oltp.id_tiempo
+    WHEN MATCHED THEN
+        UPDATE SET
+            dim.anio            = oltp.anio,
+            dim.trimestre       = oltp.trimestre,
+            dim.mes             = oltp.mes,
+            dim.semana          = oltp.semana,
+            dim.dia             = oltp.dia,
+            dim.dia_semana      = oltp.dia_semana
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (anio, trimestre, mes, semana, dia, dia_semana, id_tiempo)
+        VALUES (oltp.anio, oltp.trimestre, oltp.mes, oltp.semana,
+                oltp.dia, oltp.dia_semana, oltp.id_tiempo);
+
+    ---------------------------------------------------------------------------
+    -- D3. DIM_UBICACION
+    ---------------------------------------------------------------------------
+    MERGE [prevencion_cognitiva_mart].[dbo].[DIM_UBICACION] WITH (HOLDLOCK) AS dim
+    USING (
+        SELECT pais, departamento, provincia, ciudad, distrito, id_ubicacion
+        FROM [dbo].[v_DatosDimUbicacion]
+    ) AS oltp
+    ON dim.id_ubicacion = oltp.id_ubicacion
+    WHEN MATCHED THEN
+        UPDATE SET
+            dim.pais         = oltp.pais,
+            dim.departamento = oltp.departamento,
+            dim.provincia    = oltp.provincia,
+            dim.distrito     = oltp.distrito
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (pais, departamento, provincia, ciudad, distrito, id_ubicacion)
+        VALUES (oltp.pais, oltp.departamento, oltp.provincia, oltp.ciudad,
+                oltp.distrito, oltp.id_ubicacion);
+
+    ---------------------------------------------------------------------------
+    -- D4. DIM_TIPO_SEGUIMIENTO
+    ---------------------------------------------------------------------------
+    MERGE [prevencion_cognitiva_mart].[dbo].[DIM_TIPO_SEGUIMIENTO] WITH (HOLDLOCK) AS dim
+    USING (
+        SELECT periodicidad, tipo_seguimiento, tipo_control,
+               unidad_medida, id_tipo_seguimiento
+        FROM [dbo].[v_DatosDimTipoSeguimiento]
+    ) AS oltp
+    ON dim.id_tipo_seguimiento COLLATE DATABASE_DEFAULT = oltp.id_tipo_seguimiento
+    WHEN MATCHED THEN
+        UPDATE SET
+            dim.periodicidad     = oltp.periodicidad,
+            dim.tipo_seguimiento = oltp.tipo_seguimiento,
+            dim.tipo_control     = oltp.tipo_control,
+            dim.unidad_medida    = oltp.unidad_medida
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (periodicidad, tipo_seguimiento, tipo_control,
+                unidad_medida, id_tipo_seguimiento)
+        VALUES (oltp.periodicidad, oltp.tipo_seguimiento, oltp.tipo_control,
+                oltp.unidad_medida, oltp.id_tipo_seguimiento);
+
+    ---------------------------------------------------------------------------
+    -- D5. DIM_ORIGEN_RESULTADO
+    ---------------------------------------------------------------------------
+    MERGE [prevencion_cognitiva_mart].[dbo].[DIM_ORIGEN_RESULTADO] WITH (HOLDLOCK) AS dim
+    USING (
+        SELECT origen_resultado, estado_validacion,
+               resultado_referencia, id_origen_resultado
+        FROM [dbo].[v_DatosDimOrigenResultado]
+    ) AS oltp
+    ON dim.id_origen_resultado COLLATE DATABASE_DEFAULT = oltp.id_origen_resultado
+    WHEN MATCHED THEN
+        UPDATE SET
+            dim.origen_resultado     = oltp.origen_resultado,
+            dim.estado_validacion    = oltp.estado_validacion,
+            dim.resultado_referencia = oltp.resultado_referencia
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (origen_resultado, estado_validacion,
+                resultado_referencia, id_origen_resultado)
+        VALUES (oltp.origen_resultado, oltp.estado_validacion,
+                oltp.resultado_referencia, oltp.id_origen_resultado);
+
+    ---------------------------------------------------------------------------
+    -- D6. DIM_META
+    ---------------------------------------------------------------------------
+    MERGE [prevencion_cognitiva_mart].[dbo].[DIM_META] WITH (HOLDLOCK) AS dim
+    USING (
+        SELECT tipo_meta, criterio_meta, unidad, origen_meta, version_meta,
+               vigencia, id_meta
+        FROM [dbo].[v_DatosDimMeta]
+    ) AS oltp
+    ON dim.id_meta COLLATE DATABASE_DEFAULT = oltp.id_meta
+    WHEN MATCHED THEN
+        UPDATE SET
+            dim.tipo_meta            = oltp.tipo_meta,
+            dim.criterio_meta        = oltp.criterio_meta,
+            dim.unidad               = oltp.unidad,
+            dim.origen_meta          = oltp.origen_meta,
+            dim.version_meta         = oltp.version_meta,
+            dim.vigencia            = oltp.vigencia
+    WHEN NOT MATCHED BY TARGET THEN
+        INSERT (tipo_meta, criterio_meta, unidad, origen_meta, version_meta, vigencia, id_meta)
+        VALUES (oltp.tipo_meta, oltp.criterio_meta, oltp.unidad, oltp.origen_meta,
+                oltp.version_meta, oltp.vigencia, oltp.id_meta);
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0
+        ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+
+DROP TABLE IF EXISTS #DatosPersona, #Calendario;
+
+SELECT N'DIMENSIONES CARGADAS' AS resultado, @fecha_corte AS fecha_corte;
+GO
+-- G1 | PASO 04. ETL DE LOS DOS HECHOS
+-- Ejecutar desde la BD transaccional, después de cargar las dimensiones.
+-- Se usa el mismo método del ingeniero: DELETE + INSERT INTO ... SELECT FROM vista.
+-- Los DELETE sólo afectan las tablas de hechos del Data Mart.
+
+USE [prevencion_cognitiva_oltp];
+GO
+
+SET NOCOUNT ON;
+SET DATEFIRST 1; -- Lunes = 1.
+SET XACT_ABORT ON;
+
+IF @@TRANCOUNT <> 0
+    THROW 50003, N'Ejecute el ETL sin una transacción externa.', 1;
+
+DECLARE @fecha_corte DATE;
+DECLARE @hoy DATE = CONVERT(DATE, SYSUTCDATETIME() AT TIME ZONE 'UTC' AT TIME ZONE 'SA Pacific Standard Time');
+
+SELECT @fecha_corte = fecha_corte
+FROM [dbo].[v_FechaCorteETL];
+
+IF @fecha_corte IS NULL OR @fecha_corte <> @hoy
+    THROW 50004, N'Primero ejecute el paso 03 para actualizar las dimensiones y el calendario.', 1;
+
+-- Verificar que las fechas de origen respeten la granularidad acordada.
+IF EXISTS (
+    SELECT 1
+    FROM [dbo].[meta_semanal]
+    WHERE inicio_semana <= @fecha_corte
+      AND DATEPART(WEEKDAY, inicio_semana) <> 1
+)
+    THROW 50005, N'Existe una meta semanal cuyo inicio no es lunes.', 1;
+
+IF EXISTS (
+    SELECT 1
+    FROM [dbo].[control_programado]
+    WHERE mes_periodo <= @fecha_corte
+      AND DAY(mes_periodo) <> 1
+)
+    THROW 50006, N'Existe un control cuyo periodo no es el primer día del mes.', 1;
+
+-- Comprobar que las personas, metas y orígenes ya tengan sus KEY dimensionales.
+IF (SELECT COUNT(*) FROM [dbo].[v_PersonasETL]) <>
+   (SELECT COUNT(*) FROM [dbo].[v_InicioSeguimiento] WHERE inicio_seguimiento <= @fecha_corte)
+    THROW 50007, N'Faltan personas o ubicaciones. Vuelva a ejecutar el paso 03.', 1;
+
+IF EXISTS (
+    SELECT 1
+    FROM [dbo].[v_DatosDimMeta] AS oltp
+    LEFT JOIN [prevencion_cognitiva_mart].[dbo].[DIM_META] AS dim
+        ON dim.id_meta COLLATE DATABASE_DEFAULT = oltp.id_meta
+    WHERE dim.key_meta IS NULL
+)
+    THROW 50008, N'Faltan metas dimensionales. Vuelva a ejecutar el paso 03.', 1;
+
+IF EXISTS (
+    SELECT 1
+    FROM [dbo].[v_DatosDimOrigenResultado] AS oltp
+    LEFT JOIN [prevencion_cognitiva_mart].[dbo].[DIM_ORIGEN_RESULTADO] AS dim
+        ON dim.id_origen_resultado COLLATE DATABASE_DEFAULT = oltp.id_origen_resultado
+    WHERE dim.key_origen_resultado IS NULL
+)
+    THROW 50009, N'Faltan orígenes de resultado. Vuelva a ejecutar el paso 03.', 1;
+
+-- Cantidades de filas esperadas: dos hábitos por semana y cuatro factores por mes.
+DECLARE @habitos_esperados BIGINT;
+DECLARE @controles_esperados BIGINT;
+
+SELECT @habitos_esperados = COUNT_BIG(*) * 2
+FROM (
+    SELECT DISTINCT p.key_persona, DATETRUNC(ISO_WEEK, t.id_tiempo) AS inicio_semana
+    FROM [dbo].[v_PersonasETL] AS p
+    INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS t
+        ON t.id_tiempo BETWEEN p.inicio_seguimiento AND p.fecha_corte
+) AS semanas;
+
+SELECT @controles_esperados = COUNT_BIG(*) * 4
+FROM (
+    SELECT DISTINCT p.key_persona, DATETRUNC(MONTH, t.id_tiempo) AS inicio_mes
+    FROM [dbo].[v_PersonasETL] AS p
+    INNER JOIN [prevencion_cognitiva_mart].[dbo].[DIM_TIEMPO] AS t
+        ON t.id_tiempo BETWEEN p.inicio_seguimiento AND p.fecha_corte
+) AS meses;
+
+-- Una transacción protege ambos DELETE + INSERT. Si falla una carga,
+-- se recuperan los hechos anteriores mediante ROLLBACK.
+BEGIN TRY
+    BEGIN TRANSACTION;
+
+    ---------------------------------------------------------------------------
+    -- HECHO 1: HÁBITOS SEMANALES
+    ---------------------------------------------------------------------------
+    DELETE FROM [prevencion_cognitiva_mart].[dbo].[FACT_HABITOS_SEMANALES];
+
+    INSERT INTO [prevencion_cognitiva_mart].[dbo].[FACT_HABITOS_SEMANALES]
+    (
+        key_persona, key_tiempo, key_ubicacion, key_tipo_seguimiento, key_meta,
+        minutos_realizados, meta_minutos_semanal,
+        dias_con_contacto, meta_dias_semanal,
+        estado_datos, fecha_corte
+    )
+    SELECT key_persona, key_tiempo, key_ubicacion, key_tipo_seguimiento, key_meta,
+           minutos_realizados, meta_minutos_semanal,
+           dias_con_contacto, meta_dias_semanal,
+           estado_datos, fecha_corte
+    FROM [dbo].[v_HechoHabitosSemanales];
+
+    ---------------------------------------------------------------------------
+    -- HECHO 2: CONTROLES CARDIOMETABÓLICOS MENSUALES
+    ---------------------------------------------------------------------------
+    DELETE FROM [prevencion_cognitiva_mart].[dbo].[FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES];
+
+    INSERT INTO [prevencion_cognitiva_mart].[dbo].[FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES]
+    (
+        key_persona, key_tiempo, key_ubicacion, key_tipo_seguimiento,
+        key_origen_resultado, key_meta,
+        factores_dentro_meta, factores_previstos,
+        estado_datos, fecha_corte
+    )
+    SELECT key_persona, key_tiempo, key_ubicacion, key_tipo_seguimiento,
+           key_origen_resultado, key_meta,
+           factores_dentro_meta, factores_previstos,
+           estado_datos, fecha_corte
+    FROM [dbo].[v_HechoControlesCardiometabolicosMensuales];
+
+    ---------------------------------------------------------------------------
+    -- VALIDACIÓN ANTES DE CONFIRMAR
+    ---------------------------------------------------------------------------
+    IF (SELECT COUNT_BIG(*) FROM [prevencion_cognitiva_mart].[dbo].[FACT_HABITOS_SEMANALES]) <> @habitos_esperados
+        THROW 50010, N'El número de filas de hábitos no coincide con lo esperado.', 1;
+
+    IF (SELECT COUNT_BIG(*) FROM [prevencion_cognitiva_mart].[dbo].[FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES]) <> @controles_esperados
+        THROW 50011, N'El número de filas de controles no coincide con lo esperado.', 1;
+
+    IF EXISTS (
+        SELECT 1
+        FROM [prevencion_cognitiva_mart].[dbo].[FACT_HABITOS_SEMANALES]
+        GROUP BY key_persona, key_tiempo
+        HAVING COUNT(*) <> 2
+    )
+        THROW 50012, N'Una semana no contiene los dos hábitos.', 1;
+
+    IF EXISTS (
+        SELECT 1
+        FROM [prevencion_cognitiva_mart].[dbo].[FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES]
+        GROUP BY key_persona, key_tiempo
+        HAVING COUNT(*) <> 4
+    )
+        THROW 50013, N'Un mes no contiene los cuatro factores.', 1;
+
+    COMMIT TRANSACTION;
+END TRY
+BEGIN CATCH
+    IF XACT_STATE() <> 0
+        ROLLBACK TRANSACTION;
+    THROW;
+END CATCH;
+
+-- Consultar el resultado de la carga, sin crear ninguna tabla de auditoría.
+SELECT N'FACT_HABITOS_SEMANALES' AS tabla, COUNT_BIG(*) AS filas, @fecha_corte AS fecha_corte
+FROM [prevencion_cognitiva_mart].[dbo].[FACT_HABITOS_SEMANALES]
+UNION ALL
+SELECT N'FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES', COUNT_BIG(*), @fecha_corte
+FROM [prevencion_cognitiva_mart].[dbo].[FACT_CONTROLES_CARDIOMETABOLICOS_MENSUALES];
+GO
+

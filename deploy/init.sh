@@ -42,11 +42,9 @@ else
 fi
 
 run /scripts/bd-dim-sql/01_Crear_DataMart.sql
-run /scripts/bd-dim-sql/02_Vistas_ETL.sql
-run /scripts/bd-dim-sql/03_ETL_Dimensiones.sql
-run /scripts/bd-dim-sql/04_ETL_Hechos.sql
-run /scripts/bd-dim-sql/05_Vistas_Indicadores.sql
-run /scripts/bd-dim-sql/06_Validacion.sql
-run /scripts/bd-dim-sql/07_Reportes_DataMart.sql
+run /scripts/bd-dim-sql/02_ETL.sql
+run /scripts/bd-dim-sql/03_Vistas_Indicadores.sql
+run /scripts/bd-dim-sql/04_Validacion.sql
+run /scripts/bd-dim-sql/05_Reportes_DataMart.sql
 
 echo "[db-init] bases inicializadas"

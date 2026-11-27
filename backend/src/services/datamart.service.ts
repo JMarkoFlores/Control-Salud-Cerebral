@@ -7,7 +7,7 @@ import { getPool } from '../config/database';
  * Ejecuta los pasos 03 y 04 del ETL (dimensiones y hechos) sobre la BD transaccional.
  * Los scripts se montan en la imagen (carpeta bd-dim-sql) para no duplicar la lógica T-SQL.
  */
-const SCRIPT_SEQUENCE = ['03_ETL_Dimensiones.sql', '04_ETL_Hechos.sql'];
+const SCRIPT_SEQUENCE = ['02_ETL.sql'];
 const MART_DATABASE = 'prevencion_cognitiva_mart';
 const STATEMENT_TIMEOUT_MS = 180000;
 

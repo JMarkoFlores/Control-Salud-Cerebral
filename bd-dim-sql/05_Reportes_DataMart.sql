@@ -1,4 +1,4 @@
--- G1 | PASO 07. REPORTES DEL DATA MART (R01 a R06).
+-- G1 | PASO 05. REPORTES DEL DATA MART (R01 a R06).
 -- Ejecutar después de los scripts 01-06. Crea sólo objetos de consulta en el Mart.
 -- Cada procedimiento constituye un reporte independiente. No modifica datos.
 USE [prevencion_cognitiva_mart];
