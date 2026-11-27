@@ -9,15 +9,13 @@ export async function getPool(): Promise<any> {
   }
 
   try {
-    if (pool) {
-      await pool.close();
-    }
+    if (pool) await pool.close();
 
     if (env.DB.authType === 'windows') {
       // Conexión nativa con Autenticación Integrada de Windows (SSPI/ODBC)
       const sqlV8 = require('mssql/msnodesqlv8');
       const connStr = `Driver=${env.DB.driver};Server=${env.DB.server};Database=${env.DB.database};Trusted_Connection=yes;TrustServerCertificate=yes;`;
-      
+
       pool = await new sqlV8.ConnectionPool({
         connectionString: connStr,
         driver: 'msnodesqlv8',
