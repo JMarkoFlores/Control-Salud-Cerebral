@@ -2,18 +2,18 @@
 
 **Proyecto:** Prevención del deterioro cognitivo mediante hábitos diarios.  
 **Motor:** SQL Server 2022 (T-SQL), administrado desde SSMS.  
-**Origen:** `prevencion_cognitiva` (archivo definitivo `bd-transaccional.sql`, 17 tablas).  
+**Origen:** `prevencion_cognitiva_oltp` (archivo definitivo `bd-transaccional.sql`, 17 tablas).  
 **Destino propuesto:** `prevencion_cognitiva_mart` (una sola base dimensional).  
 **Alcance:** autoseguimiento. La aplicación transaccional y los visualizadores no se modifican con estos scripts.
 
-**Versión 4 (método del ingeniero):** el Data Mart tiene exactamente ocho tablas, seis dimensiones y dos hechos. Las vistas de preparación y las cargas ETL se ejecutan desde `prevencion_cognitiva`; el destino se referencia por `[prevencion_cognitiva_mart].[dbo].[Tabla]`. No se crea ninguna tabla técnica de auditoría ni procedimiento coordinador. Los indicadores y los reportes se conservan.
+**Versión 4 (método del ingeniero):** el Data Mart tiene exactamente ocho tablas, seis dimensiones y dos hechos. Las vistas de preparación y las cargas ETL se ejecutan desde `prevencion_cognitiva_oltp`; el destino se referencia por `[prevencion_cognitiva_mart].[dbo].[Tabla]`. No se crea ninguna tabla técnica de auditoría ni procedimiento coordinador. Los indicadores y los reportes se conservan.
 
 ## 1. Orden de instalación y ejecución en SSMS
 
 Conéctate a la misma instancia SQL Server que contiene el OLTP. Comprueba primero:
 
 ```sql
-SELECT DB_ID(N'prevencion_cognitiva') AS id_bd_origen;
+SELECT DB_ID(N'prevencion_cognitiva_oltp') AS id_bd_origen;
 SELECT @@VERSION AS version_sql_server;
 ```
 
@@ -36,7 +36,7 @@ Abre y ejecuta los siete archivos uno por uno en SSMS. No continúes si aparece 
 Después del paso 03 y antes del paso 04 puedes visualizar cómo quedarán los hechos, tal como se prepara una vista en los ejemplos del ingeniero:
 
 ```sql
-USE [prevencion_cognitiva];
+USE [prevencion_cognitiva_oltp];
 GO
 SELECT * FROM [dbo].[v_HechoHabitosSemanales];
 SELECT * FROM [dbo].[v_HechoControlesCardiometabolicosMensuales];
@@ -73,7 +73,7 @@ Esta limpieza no forma parte de los siete scripts nuevos; elimina la antigua inf
 
 ### Lectura de los scripts y funciones SQL utilizadas
 
-La sintaxis que usa el profesor `[BaseDeDatos].[esquema].[tabla]` identifica la tabla sin depender de qué base se encuentre seleccionada en SSMS. Por ejemplo, `[prevencion_cognitiva].[dbo].[persona]` es el origen y `[prevencion_cognitiva_mart].[dbo].[DIM_PERSONA]` el destino. `dbo` es el esquema, no el nombre de la base de datos.
+La sintaxis que usa el profesor `[BaseDeDatos].[esquema].[tabla]` identifica la tabla sin depender de qué base se encuentre seleccionada en SSMS. Por ejemplo, `[prevencion_cognitiva_oltp].[dbo].[persona]` es el origen y `[prevencion_cognitiva_mart].[dbo].[DIM_PERSONA]` el destino. `dbo` es el esquema, no el nombre de la base de datos.
 
 | Función o instrucción | Explicación corta | Ejemplo |
 |---|---|---|

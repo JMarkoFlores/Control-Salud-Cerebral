@@ -2,7 +2,7 @@
 -- Las vistas de ETL se crean dentro de la base transaccional, en dbo.
 -- Sólo realizan SELECT; no insertan ni modifican registros del OLTP.
 
-USE [prevencion_cognitiva];
+USE [prevencion_cognitiva_oltp];
 GO
 
 -- D1. Persona: estado descriptivo y PK de origen.

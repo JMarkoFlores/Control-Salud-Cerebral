@@ -1,6 +1,6 @@
 -- G1 | PASO 06. VALIDACIÓN DE LA CARGA
 -- Sólo consultas SELECT: no altera el OLTP ni el Data Mart.
-USE [prevencion_cognitiva];
+USE [prevencion_cognitiva_oltp];
 GO
 SET NOCOUNT ON;
 

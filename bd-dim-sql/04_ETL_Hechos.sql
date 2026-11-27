@@ -3,7 +3,7 @@
 -- Se usa el mismo método del ingeniero: DELETE + INSERT INTO ... SELECT FROM vista.
 -- Los DELETE sólo afectan las tablas de hechos del Data Mart.
 
-USE [prevencion_cognitiva];
+USE [prevencion_cognitiva_oltp];
 GO
 
 SET NOCOUNT ON;

@@ -2,11 +2,11 @@
 -- KEY = llave sustituta de la dimensión; ID = identificador del OLTP.
 -- PK = clave primaria, FK = clave foránea, UQ = valor o combinación única.
 -- El Data Mart contiene exactamente seis dimensiones y dos hechos.
--- Ejecutar en la misma instancia que prevencion_cognitiva.
+-- Ejecutar en la misma instancia que prevencion_cognitiva_oltp.
 USE [master];
 GO
-IF DB_ID(N'prevencion_cognitiva') IS NULL
-    THROW 50001, N'No existe la BD transaccional prevencion_cognitiva.', 1;
+IF DB_ID(N'prevencion_cognitiva_oltp') IS NULL
+    THROW 50001, N'No existe la BD transaccional prevencion_cognitiva_oltp.', 1;
 GO
 IF DB_ID(N'prevencion_cognitiva_mart') IS NULL
     CREATE DATABASE [prevencion_cognitiva_mart];

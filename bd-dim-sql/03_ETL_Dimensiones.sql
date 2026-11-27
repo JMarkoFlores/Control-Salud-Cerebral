@@ -3,7 +3,7 @@
 -- MERGE compara los identificadores de origen. No compara las KEY autoincrementables.
 -- Se trabaja desde el OLTP, y el destino se indica con BD.esquema.tabla.
 -- HOLDLOCK protege la coincidencia del MERGE durante la carga.
-USE [prevencion_cognitiva];
+USE [prevencion_cognitiva_oltp];
 GO
 
 SET NOCOUNT ON;
