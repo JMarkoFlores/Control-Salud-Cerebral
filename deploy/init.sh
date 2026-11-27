@@ -8,11 +8,11 @@ fi
 
 run() {
   echo "[db-init] ejecutando $1"
-  "$SQLCMD" -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -b -i "$1"
+  "$SQLCMD" -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -b -I -i "$1"
 }
 
 echo "[db-init] esperando a sqlserver..."
-until "$SQLCMD" -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -b -Q "SELECT 1" >/dev/null 2>&1; do
+until "$SQLCMD" -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -b -I -Q "SELECT 1" >/dev/null 2>&1; do
   sleep 3
 done
 
