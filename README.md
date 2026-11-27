@@ -11,8 +11,9 @@ Sistema integral de salud digital diseñado bajo principios de Arquitectura Limp
 3. [Roles del Sistema y Gestión Clínica](#3-roles-del-sistema-y-gestión-clínica)
 4. [Credenciales de Prueba (Demo)](#4-credenciales-de-prueba-demo)
 5. [Instalación y Despliegue Local](#5-instalación-y-despliegue-local)
-6. [Reglas de Negocio y Algoritmos Clínicos](#6-reglas-de-negocio-y-algoritmos-clínicos)
-7. [Estructura del Proyecto](#7-estructura-del-proyecto)
+6. [Quickstart de Despliegue en VPS (Dokploy)](#6-quickstart-de-despliegue-en-vps-dokploy)
+7. [Reglas de Negocio y Algoritmos Clínicos](#7-reglas-de-negocio-y-algoritmos-clínicos)
+8. [Estructura del Proyecto](#8-estructura-del-proyecto)
 
 ---
 
@@ -29,7 +30,7 @@ El proyecto **Control de Salud Cerebral** tiene como objetivo prevenir y mitigar
 ## 2. Stack Tecnológico
 
 ### Backend (`/backend`)
-- **Runtime:** Node.js (v20+) con TypeScript en modo estricto.
+- **Runtime:** Node.js (v24) con TypeScript en modo estricto.
 - **Framework:** Express con arquitectura modular basada en Capas (Rutas $\rightarrow$ Controladores $\rightarrow$ Servicios $\rightarrow$ Repositorios).
 - **Base de Datos:** Microsoft SQL Server (`mssql`), Connection Pooling y consultas 100% parametrizadas (protección contra SQL Injection).
 - **Seguridad:** Autenticación JWT (`jsonwebtoken`), hash de contraseñas con salting (`bcryptjs`) y control de acceso basado en roles (RBAC).
@@ -89,7 +90,7 @@ El sistema incluye cuentas precargadas en `seed-data.sql` con hashes reales de `
 ## 5. Instalación y Despliegue Local
 
 ### Requisitos Previos
-- Node.js v18 o superior instalado.
+- Node.js v24 y pnpm instalado.
 - Microsoft SQL Server y SQL Server Management Studio (SSMS).
 - Git.
 
@@ -129,7 +130,7 @@ LOCALE=es-PE
 Comprueba que el backend se comunica con las 17 tablas:
 ```bash
 cd backend
-npm run test:db
+pnpm test:db
 ```
 
 ### Paso 4: Levantar los Servidores
@@ -137,20 +138,59 @@ npm run test:db
 #### Terminal 1 — Backend (API en Puerto 4000)
 ```bash
 cd backend
-npm run dev
+pnpm dev
 ```
 
 #### Terminal 2 — Frontend (Vite en Puerto 5173)
 ```bash
 cd frontend
-npm run dev
+pnpm dev
 ```
 
 Abre tu navegador en: **`http://localhost:5173`**
 
 ---
 
-## 6. Reglas de Negocio y Algoritmos Clínicos
+## 6. Quickstart de Despliegue en VPS (Dokploy)
+
+Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1433`. Ningún puerto se publica al host; solo el frontend tiene dominio HTTPS.
+
+### 6.1 Prerrequisitos
+- VPS con **4 GB de RAM mínimo** (SQL Server 2022 reserva ~1.5 GB).
+- DNS: registro `A` de `saludcerebral.giansmd.dev` hacia la IP del VPS. Si el dominio está en Cloudflare, dejar la nube en **DNS only** hasta que Let's Encrypt emita el certificado.
+- Repositorio privado `giansmd/Control-Salud-Cerebral-VPS` (el repo público original queda como `upstream`).
+
+### 6.2 Variables de entorno en Dokploy
+| Variable | Ejemplo / valor |
+| :--- | :--- |
+| `MSSQL_SA_PASSWORD` | contraseña fuerte, mínimo 8 caracteres con mayúscula, minúscula, número y símbolo |
+| `JWT_SECRET` | cadena aleatoria de 32+ caracteres |
+| `SEED_DATA` | `true` solo para la primera carga de datos demo |
+| `DB_DATABASE` | `prevencion_cognitiva_oltp` |
+| `MSSQL_MEMORY_LIMIT_MB` | `1536` |
+| `TZ` | `America/Lima` |
+
+### 6.3 Pasos
+1. En Dokploy: **Create Project → Compose**, conectar el repo privado y usar `docker-compose.prod.yml`.
+2. Pegar las variables de la tabla en **Environment** y desplegar. Se construyen `sqlserver`, `backend` y `frontend`.
+3. Inicializar ambas bases (OLTP, seed opcional y Data Mart):
+   ```bash
+   docker compose --profile init run --rm db-init
+   ```
+   El job ejecuta en orden `bd-transaccional.sql`, `seed-data.sql` (si `SEED_DATA=true`), `01`–`07` de `bd-dim-sql/` y falla con `-b` ante el primer error.
+4. En **Domains**: servicio `frontend`, container port `80`, host `saludcerebral.giansmd.dev`, HTTPS con Let's Encrypt.
+5. Verificar: `https://saludcerebral.giansmd.dev/api/v1/health` y login demo.
+
+### 6.4 Actualizar el Data Mart
+En **Reportes Analíticos** (rol ADMIN) está el botón **Actualizar Data Mart**. Ejecuta el ETL `03` (dimensiones) y `04` (hechos) desde la base transaccional y devuelve filas cargadas, duración y fecha de corte. El endpoint es `POST /api/v1/admin/datamart/refresh` y rechaza ejecuciones simultáneas.
+
+### 6.5 Notas
+- `msnodesqlv8` (autenticación Windows) queda como dependencia opcional: en el servidor se usa autenticación SQL con `sa`.
+- Los cambios de esquema se aplican volviendo a ejecutar el job `db-init`; los scripts `01`, `02`, `05` y `07` son idempotentes.
+
+---
+
+## 7. Reglas de Negocio y Algoritmos Clínicos
 
 1. **Los 3 Indicadores de Cumplimiento (KPIs):**
    - **CAF (Actividad Física):** $(\text{Minutos válidos en la semana} \div \text{Meta semanal}) \times 100$.
@@ -179,7 +219,7 @@ Abre tu navegador en: **`http://localhost:5173`**
 
 ---
 
-## 7. Estructura del Proyecto
+## 8. Estructura del Proyecto
 
 ```text
 Control-Salud-Cerebral/
