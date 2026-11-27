@@ -50,7 +50,8 @@ export const Login: React.FC<{ onNavigateRegister: () => void }> = ({ onNavigate
             </p>
           </div>
 
-          {/* Accesos Rápidos de Prueba (Demo) */}
+          {/* Accesos Rápidos de Prueba (Demo) — solo en desarrollo; nunca en el build de producción */}
+          {import.meta.env.DEV && (
           <div className="mt-8 pt-6 border-t border-white/10">
             <span className="text-[11px] font-bold text-teal-200 uppercase tracking-wider block mb-2.5 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
@@ -82,6 +83,7 @@ export const Login: React.FC<{ onNavigateRegister: () => void }> = ({ onNavigate
               </button>
             </div>
           </div>
+          )}
         </div>
 
         {/* Lado Derecho: Formulario */}

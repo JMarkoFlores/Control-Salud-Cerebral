@@ -1,42 +1,51 @@
 import express from 'express';
 import cors from 'cors';
+import helmet from 'helmet';
 import { env } from './config/env';
 import apiRoutes from './routes';
+import { apiLimiter } from './middlewares/rateLimit.middleware';
 import { errorHandler } from './middlewares/error.middleware';
 import { startAlertCronJobs } from './jobs/alertCron.job';
 
 const app = express();
 
-// Middlewares globales
-app.use(cors({
-  origin: '*',
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+// Detrás de Traefik en producción: usa la IP real del cliente para logs y rate limit.
+// En local no se confía en cabeceras reenviadas (evita spoofing de X-Forwarded-For).
+app.set('trust proxy', env.NODE_ENV === 'production' ? 1 : false);
+app.disable('x-powered-by');
+
+// Cabeceras de seguridad (API JSON; la CSP se aplica en nginx para el frontend).
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: 'same-origin' },
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+// CORS cerrado por defecto: solo mismo origen, salvo orígenes explicitos en CORS_ORIGINS.
+app.use(cors({
+  origin: env.CORS_ORIGINS.length > 0 ? env.CORS_ORIGINS : false,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
+  maxAge: 600,
+}));
 
-// Logging de peticiones
+app.use(express.json({ limit: '1mb' }));
+app.use(express.urlencoded({ extended: true, limit: '1mb' }));
+
+// Logging de peticiones (sin cuerpos ni cabeceras sensibles)
 app.use((req, res, next) => {
   if (env.NODE_ENV !== 'test') {
-    console.log(`[${new Date().toLocaleTimeString('es-PE')}] ${req.method} ${req.url}`);
+    console.log(`[${new Date().toLocaleTimeString('es-PE')}] ${req.method} ${req.path}`);
   }
   next();
 });
 
 // Enrutador de la API v1
+app.use('/api', apiLimiter);
 app.use('/api/v1', apiRoutes);
 
-// Ruta base
+// Ruta base: solo lo minimo, sin pistas de infraestructura
 app.get('/', (req, res) => {
-  res.json({
-    nombre: 'API Prevención del Deterioro Cognitivo mediante Hábitos Diarios (G1)',
-    version: '1.0.0',
-    piloto: 'Trujillo, Perú',
-    documentacion: '/api/v1/health',
-    status: 'ONLINE',
-  });
+  res.json({ status: 'ONLINE' });
 });
 
 // Manejo centralizado de errores

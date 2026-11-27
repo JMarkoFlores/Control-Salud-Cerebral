@@ -1,0 +1,6 @@
+# Scripts y configuración de contenedores deben conservar LF al clonar en Windows.
+*.sh          text eol=lf
+Dockerfile    text eol=lf
+*.conf        text eol=lf
+*.yml         text eol=lf
+*.yaml        text eol=lf

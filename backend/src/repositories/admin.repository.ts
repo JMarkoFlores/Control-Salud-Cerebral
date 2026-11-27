@@ -235,7 +235,7 @@ export class AdminRepository {
 
       let cuentaId = null;
       if (data.correo_acceso && data.password) {
-        const hash = await bcrypt.hash(data.password, 10);
+        const hash = await bcrypt.hash(data.password, 12);
         const cRes = await transaction.request()
           .input('persona_titular_id', sql.Int, personaId)
           .input('correo_acceso', sql.VarChar(120), data.correo_acceso.trim().toLowerCase())
@@ -322,7 +322,7 @@ export class AdminRepository {
       `;
 
       if (data.password && data.password.trim().length > 0) {
-        const hash = await bcrypt.hash(data.password, 10);
+        const hash = await bcrypt.hash(data.password, 12);
         req.input('hash', sql.VarChar(255), hash);
         updateQuery += `, password_hash = @hash`;
       }
@@ -330,7 +330,7 @@ export class AdminRepository {
       updateQuery += ` WHERE cuenta_id = @cid`;
       await req.query(updateQuery);
     } else if (data.correo_acceso && data.password && data.rol) {
-      const hash = await bcrypt.hash(data.password, 10);
+      const hash = await bcrypt.hash(data.password, 12);
       await pool.request()
         .input('pid', sql.Int, data.persona_id)
         .input('correo', sql.VarChar(120), data.correo_acceso.trim().toLowerCase())

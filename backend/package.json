@@ -15,6 +15,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test:db": "tsx src/scripts/testDb.ts",
+    "test:unit": "tsx --test src/utils/password.test.ts",
     "db:seed": "tsx src/scripts/seedDb.ts"
   },
   "dependencies": {
@@ -22,6 +23,8 @@
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
+    "express-rate-limit": "^8.7.5",
+    "helmet": "^8.3.0",
     "jsonwebtoken": "^9.0.2",
     "mssql": "^11.0.1",
     "node-cron": "^3.0.3",

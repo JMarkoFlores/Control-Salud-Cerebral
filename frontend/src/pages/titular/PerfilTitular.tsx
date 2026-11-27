@@ -22,8 +22,13 @@ export const PerfilTitular: React.FC = () => {
     setPassError(null);
     setPassSuccess(null);
 
-    if (passNueva.length < 6) {
-      setPassError('La nueva contraseña debe tener al menos 6 caracteres.');
+    if (passNueva.length < 8) {
+      setPassError('La nueva contraseña debe tener al menos 8 caracteres.');
+      return;
+    }
+
+    if (!/[A-Za-z]/.test(passNueva) || !/\d/.test(passNueva)) {
+      setPassError('La nueva contraseña debe incluir al menos una letra y un número.');
       return;
     }
 

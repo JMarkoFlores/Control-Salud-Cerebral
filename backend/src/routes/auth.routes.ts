@@ -2,12 +2,13 @@ import { Router } from 'express';
 import { AuthController } from '../controllers/auth.controller';
 import { authenticateJWT } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/role.middleware';
+import { authLimiter } from '../middlewares/rateLimit.middleware';
 
 const router = Router();
 const controller = new AuthController();
 
-router.post('/login', controller.login);
-router.post('/registro', controller.registro);
+router.post('/login', authLimiter, controller.login);
+router.post('/registro', authLimiter, controller.registro);
 router.get('/me', authenticateJWT, controller.me);
 router.put('/cambiar-password', authenticateJWT, controller.cambiarPassword);
 

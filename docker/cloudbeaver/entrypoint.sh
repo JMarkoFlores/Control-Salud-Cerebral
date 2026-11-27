@@ -18,5 +18,6 @@ if [ -f "${TEMPLATE}" ] && [ ! -f "${CONFIG_DIR}/data-sources.json" ]; then
 fi
 
 chown -R dbeaver:dbeaver "${WORKSPACE_DIR}" 2>/dev/null || true
+chmod 600 "${CONFIG_DIR}/data-sources.json" 2>/dev/null || true
 
 exec /opt/cloudbeaver/launch-product.sh "$@"

@@ -4,6 +4,11 @@ import jwt from 'jsonwebtoken';
 import { AuthRepository } from '../repositories/auth.repository';
 import { AlertaService } from '../services/alerta.service';
 import { env } from '../config/env';
+import { isValidEmail, normalizeEmail, passwordPolicyError } from '../utils/password';
+
+const BCRYPT_ROUNDS = 12;
+// Hash de referencia para igualar el tiempo de respuesta cuando el correo no existe.
+const DUMMY_HASH = '$2a$12$hONKU0q/qklMKzMeU5cRz.zJwe8cWlIyx6kX/LSVvRIlSdgjj1Tzi';
 
 export class AuthController {
   private authRepo = new AuthRepository();
@@ -11,9 +16,10 @@ export class AuthController {
 
   login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { correo, password } = req.body;
+      const correo = normalizeEmail(req.body?.correo);
+      const { password } = req.body || {};
 
-      if (!correo || !password) {
+      if (!correo || typeof password !== 'string' || !password) {
         res.status(400).json({
           success: false,
           error: { code: 'INVALID_INPUT', message: 'Debes ingresar tu correo y contraseña.' },
@@ -23,7 +29,10 @@ export class AuthController {
 
       const account = await this.authRepo.findByEmail(correo);
 
-      if (!account) {
+      // Comparar siempre contra un hash para no filtrar por tiempo si el correo existe.
+      const passwordMatch = await bcrypt.compare(password, account?.password_hash || DUMMY_HASH);
+
+      if (!account || !passwordMatch) {
         res.status(401).json({
           success: false,
           error: { code: 'INVALID_CREDENTIALS', message: 'Credenciales incorrectas. Verifica tu correo o contraseña.' },
@@ -35,15 +44,6 @@ export class AuthController {
         res.status(403).json({
           success: false,
           error: { code: 'ACCOUNT_DISABLED', message: 'Esta cuenta se encuentra deshabilitada o pendiente de autorización.' },
-        });
-        return;
-      }
-
-      const passwordMatch = await bcrypt.compare(password, account.password_hash);
-      if (!passwordMatch) {
-        res.status(401).json({
-          success: false,
-          error: { code: 'INVALID_CREDENTIALS', message: 'Credenciales incorrectas. Verifica tu correo o contraseña.' },
         });
         return;
       }
@@ -60,7 +60,9 @@ export class AuthController {
         codigo_interno: account.codigo_interno,
       };
 
-      const token = jwt.sign(payload, env.JWT.secret, { expiresIn: '7d' });
+      const token = jwt.sign(payload, env.JWT.secret, {
+        expiresIn: env.JWT.expiresIn as jwt.SignOptions['expiresIn'],
+      });
 
       // Verificación ligera de alertas motivadoras al login
       if (account.rol === 'TITULAR') {
@@ -93,12 +95,42 @@ export class AuthController {
 
   registro = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
-      const { nombres, apellidos, fecha_nacimiento, sexo, ubicacion_id, correo, password } = req.body;
+      const body = req.body || {};
+      const nombres = typeof body.nombres === 'string' ? body.nombres.trim() : '';
+      const apellidos = typeof body.apellidos === 'string' ? body.apellidos.trim() : '';
+      const { fecha_nacimiento, sexo, ubicacion_id } = body;
+      const correo = normalizeEmail(body.correo);
+      const { password } = body;
 
       if (!nombres || !apellidos || !fecha_nacimiento || !correo || !password) {
         res.status(400).json({
           success: false,
           error: { code: 'MISSING_FIELDS', message: 'Por favor completa todos los campos requeridos.' },
+        });
+        return;
+      }
+
+      if (nombres.length > 80 || apellidos.length > 80) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_INPUT', message: 'Nombres y apellidos no pueden superar los 80 caracteres.' },
+        });
+        return;
+      }
+
+      if (!isValidEmail(correo)) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'INVALID_EMAIL', message: 'Ingresa un correo electrónico válido.' },
+        });
+        return;
+      }
+
+      const passwordError = passwordPolicyError(password);
+      if (passwordError) {
+        res.status(400).json({
+          success: false,
+          error: { code: 'WEAK_PASSWORD', message: passwordError },
         });
         return;
       }
@@ -123,7 +155,7 @@ export class AuthController {
       });
 
       // Hashear password con bcrypt
-      const password_hash = await bcrypt.hash(password, 10);
+      const password_hash = await bcrypt.hash(password, BCRYPT_ROUNDS);
 
       // Crear cuenta con rol TITULAR
       const cuenta_id = await this.authRepo.createAccount({
@@ -210,7 +242,7 @@ export class AuthController {
         return;
       }
 
-      const { passwordActual, passwordNueva } = req.body;
+      const { passwordActual, passwordNueva } = req.body || {};
 
       if (!passwordActual || !passwordNueva) {
         res.status(400).json({
@@ -220,10 +252,11 @@ export class AuthController {
         return;
       }
 
-      if (passwordNueva.length < 6) {
+      const passwordError = passwordPolicyError(passwordNueva);
+      if (passwordError) {
         res.status(400).json({
           success: false,
-          error: { code: 'PASSWORD_TOO_SHORT', message: 'La nueva contraseña debe tener al menos 6 caracteres.' },
+          error: { code: 'WEAK_PASSWORD', message: passwordError },
         });
         return;
       }
@@ -254,7 +287,7 @@ export class AuthController {
         return;
       }
 
-      const passwordHash = await bcrypt.hash(passwordNueva, 10);
+      const passwordHash = await bcrypt.hash(passwordNueva, BCRYPT_ROUNDS);
       await this.authRepo.updatePassword(req.user.cuenta_id, passwordHash);
 
       res.json({

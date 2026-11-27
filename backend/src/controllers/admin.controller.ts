@@ -3,6 +3,7 @@ import { AdminRepository } from '../repositories/admin.repository';
 import { AlertaRepository } from '../repositories/alerta.repository';
 import { LogroRepository } from '../repositories/logro.repository';
 import { getMondayOfCurrentWeek, getFirstDayOfMonth } from '../utils/dateUtils';
+import { isValidEmail, normalizeEmail, passwordPolicyError } from '../utils/password';
 
 export class AdminController {
   private adminRepo = new AdminRepository();
@@ -307,13 +308,25 @@ export class AdminController {
         return;
       }
 
+      const correoNormalizado = normalizeEmail(correo_acceso);
+      if (correoNormalizado && !isValidEmail(correoNormalizado)) {
+        res.status(400).json({ success: false, error: { message: 'El correo electrónico no es válido.' } });
+        return;
+      }
+
+      const passwordError = password ? passwordPolicyError(password) : null;
+      if (passwordError) {
+        res.status(400).json({ success: false, error: { message: passwordError } });
+        return;
+      }
+
       const result = await this.adminRepo.crearUsuario({
         nombres,
         apellidos,
         fecha_nacimiento,
         sexo,
         ubicacion_id: parseInt(ubicacion_id, 10),
-        correo_acceso,
+        correo_acceso: correoNormalizado || undefined,
         password,
         rol,
         persona_titular_id: persona_titular_id ? parseInt(persona_titular_id, 10) : undefined,
@@ -370,6 +383,18 @@ export class AdminController {
         meta_imc_max,
       } = req.body;
 
+      const correoNormalizado = normalizeEmail(correo_acceso);
+      if (correoNormalizado && !isValidEmail(correoNormalizado)) {
+        res.status(400).json({ success: false, error: { message: 'El correo electrónico no es válido.' } });
+        return;
+      }
+
+      const passwordError = password ? passwordPolicyError(password) : null;
+      if (passwordError) {
+        res.status(400).json({ success: false, error: { message: passwordError } });
+        return;
+      }
+
       await this.adminRepo.actualizarUsuario({
         persona_id: personaId,
         cuenta_id: cuenta_id ? parseInt(cuenta_id, 10) : null,
@@ -379,7 +404,7 @@ export class AdminController {
         sexo,
         ubicacion_id: parseInt(ubicacion_id, 10),
         activo: activo !== undefined ? Boolean(activo) : true,
-        correo_acceso,
+        correo_acceso: correoNormalizado || undefined,
         password,
         rol,
         nombre_contacto,

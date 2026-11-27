@@ -75,9 +75,13 @@ El sistema cuenta con un modelo estricto de dos roles autorizados:
 
 ## 4. Credenciales de Prueba (Demo)
 
+> **Este repositorio es público.** Estas cuentas existen solo para la demo local del piloto.
+> En producción (`SEED_DATA=false`) no deben habilitarse; si se cargan, cambia las contraseñas
+> en el primer ingreso y desactiva las cuentas de ejemplo.
+
 El sistema incluye cuentas precargadas en `seed-data.sql` con hashes reales de `bcrypt`:
 
-| Rol | Correo Electrónico | Contraseña | Descripción / Participante |
+| Rol | Correo Electrónico | Contraseña (solo demo local) | Descripción / Participante |
 | :--- | :--- | :--- | :--- |
 | **ADMIN** | `admin@saludcerebral.pe` | `Admin123!` | Administrador Central del Piloto en Trujillo |
 | **TITULAR** | `carlos.mendoza@gmail.com` | `Titular123!` | Carlos Mendoza (`P-001`), 50 años, Trujillo |
@@ -117,9 +121,13 @@ DB_SERVER=.
 DB_DATABASE=prevencion_cognitiva_oltp
 DB_ODBC_DRIVER={ODBC Driver 18 for SQL Server}
 
-# Seguridad JWT
-JWT_SECRET=super_secret_jwt_key_prevencion_cognitiva_g1_trujillo_2026
+# Seguridad JWT (obligatorio: 32+ caracteres aleatorios)
+# Generar con: node -e "console.log(require('crypto').randomBytes(48).toString('base64url'))"
+JWT_SECRET=cambia-esto-por-un-secreto-aleatorio-de-32-o-mas-caracteres
 JWT_EXPIRES_IN=7d
+
+# CORS: vacío = solo mismo origen (recomendado). Lista separada por comas si hace falta.
+CORS_ORIGINS=
 
 # Localización
 TZ=America/Lima
@@ -164,7 +172,8 @@ Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1
 | Variable | Ejemplo / valor |
 | :--- | :--- |
 | `MSSQL_SA_PASSWORD` | contraseña fuerte, mínimo 8 caracteres con mayúscula, minúscula, número y símbolo |
-| `JWT_SECRET` | cadena aleatoria de 32+ caracteres |
+| `JWT_SECRET` | cadena aleatoria de 32+ caracteres (nunca reutilizar el ejemplo del repo) |
+| `CORS_ORIGINS` | vacío (solo mismo origen); lista por comas solo si el frontend vive en otro dominio |
 | `SEED_DATA` | `true` solo para la primera carga de datos demo; luego `false` |
 | `RESET_DB` | `true` para eliminar ambas bases antes de reinicializar; dejar `false` en operación normal |
 | `DB_DATABASE` | `prevencion_cognitiva_oltp` |
@@ -194,9 +203,10 @@ En **Reportes Analíticos** (rol ADMIN) está el botón **Actualizar Data Mart**
 
 ### 6.5 Panel de bases de datos (CloudBeaver)
 - URL: `https://db-saludcerebral.giansmd.dev` (contenedor `cloudbeaver`, puerto interno 8978).
+- **Riesgo:** el panel maneja credenciales `sa` y está en Internet. Debe tener una segunda capa: basic auth de Traefik o allowlist de IP en el middleware del dominio. Sin eso, cualquiera que descubra el host llega al login del panel.
 - Usuario administrador `cbadmin`; contraseña en el gestor de secretos del equipo, nunca en el repo.
-- Dos conexiones compartidas: `SQL Server OLTP (salud cerebral)` y `SQL Server Data Mart (salud cerebral)`, ambas sobre la misma instancia `sqlserver:1433`.
-- En el primer uso de cada conexión se piden usuario y contraseña de SQL Server; al marcar "Guardar credenciales para todos los usuarios con acceso" quedan cifradas en el volumen `cloudbeaver-data`.
+- Una sola conexión compartida `SQL Server (salud cerebral)` sobre `sqlserver:1433`, con base por defecto `prevencion_cognitiva_oltp`. El Data Mart se abre desde el árbol de bases o con el prefijo `prevencion_cognitiva_mart.dbo.`.
+- En el primer uso de la conexión se piden usuario y contraseña de SQL Server; al marcar "Guardar credenciales para todos los usuarios con acceso" quedan cifradas en el volumen `cloudbeaver-data`.
 - Las conexiones viven en el volumen, así que sobreviven a redeploys. El entrypoint solo siembra la plantilla en el primer arranque.
 
 Alternativa por terminal dentro del VPS:
@@ -208,6 +218,19 @@ docker exec -it control-salud-cerebral-lmb9cv-sqlserver-1 bash
 ### 6.6 Notas
 - `msnodesqlv8` (autenticación Windows) queda como dependencia opcional: en el servidor se usa autenticación SQL con `sa`.
 - Los cambios de esquema se aplican volviendo a ejecutar el job `db-init`; los scripts `01`, `02`, `05` y `07` son idempotentes.
+
+### 6.7 Seguridad (repo público)
+Este repositorio es público: nada de lo que se commitea aquí es secreto.
+
+- **Secretos solo en Dokploy / `.env` local.** `JWT_SECRET` (32+ caracteres aleatorios) y `MSSQL_SA_PASSWORD` nunca se commitean. `backend/.env` está en `.gitignore` y en `.dockerignore`.
+- **Sin valores por defecto para secretos.** Si falta `JWT_SECRET`, el backend no arranca (fail-closed).
+- **CORS cerrado:** solo mismo origen. Si se necesita otro dominio, declararlo en `CORS_ORIGINS`.
+- **Rate limiting:** 300 req/15 min por IP en la API, 10 intentos/15 min en login y registro, 30/15 min en el chatbot.
+- **Contraseñas:** mínimo 8 caracteres con letra y número; hash `bcrypt` con costo 12.
+- **Panel de BD (CloudBeaver):** maneja credenciales `sa`; protegerlo con basic auth de Traefik o allowlist de IP. Nunca dejarlo sin segunda capa.
+- **Cuentas demo:** las contraseñas del seed son públicas. No cargar `SEED_DATA=true` en producción o cambiar las claves de inmediato.
+- **Historial de git:** versiones antiguas del repo contienen un `JWT_SECRET` de ejemplo. No reutilizar ese valor; rotar el secreto de producción invalida todas las sesiones.
+- **Cabeceras:** Helmet en la API y CSP, HSTS, `X-Frame-Options`, `nosniff`, `Referrer-Policy` y `Permissions-Policy` en nginx.
 
 ---
 

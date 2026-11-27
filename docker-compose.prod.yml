@@ -9,5 +9,7 @@ services:
     restart: unless-stopped
   frontend:
     restart: unless-stopped
+  # Panel de administración de BD. Debe quedar protegido con una segunda capa
+  # (basic auth de Traefik o allowlist de IP); nunca abierto sin auth.
   cloudbeaver:
     restart: unless-stopped
