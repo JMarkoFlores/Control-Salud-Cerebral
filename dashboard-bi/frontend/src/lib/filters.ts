@@ -65,6 +65,11 @@ function addMonths(value: string, months: number): string {
   return date.toISOString().slice(0, 10);
 }
 
+function endOfMonth(value: string): string {
+  const [year, month] = value.split('-').map(Number);
+  return new Date(Date.UTC(year, month, 0)).toISOString().slice(0, 10);
+}
+
 export function defaultsForView(view: ViewId, meta: MetaInfo): Filters {
   const filters = emptyFilters();
   filters.onlyClosed = view !== 'evolucion';
@@ -86,7 +91,7 @@ export function defaultsForView(view: ViewId, meta: MetaInfo): Filters {
   if (view === 'evolucion') {
     if (month) {
       filters.from = addMonths(month, -5);
-      filters.to = month;
+      filters.to = endOfMonth(month);
     }
     return filters;
   }

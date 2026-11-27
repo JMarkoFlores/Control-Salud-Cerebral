@@ -273,6 +273,7 @@ Si necesitas datos demo:
 - Define `SEED_DATA=true` **antes del primer despliegue**. El seed solo se inserta al crear el OLTP.
 - Si el OLTP ya existe, `SEED_DATA` se ignora.
 - En operación real deja `SEED_DATA=false`, `RESET_DB=false` y `RESET_MART=false`.
+- El seed de demostración incluye 6 semanas (5 cerradas + la actual) y 2 meses de metas, actividad, contacto, confirmaciones y resultados clínicos para Carlos, María y Jorge. Con `SEED_DATA=true` el dashboard muestra CAF, CCS y FCM desde el primer despliegue.
 
 ### 6.4 Domains en Dokploy
 Configura dos subdominios independientes:

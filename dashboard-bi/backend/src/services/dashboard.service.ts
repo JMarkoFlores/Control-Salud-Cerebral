@@ -27,7 +27,7 @@ import {
   stateLabel,
   sumField
 } from '../utils/calc';
-import { addMonths, formatMonthYearLabel, formatWeekLabel, startOfMonth } from '../utils/date';
+import { addMonths, endOfMonth, formatMonthYearLabel, formatWeekLabel, startOfMonth } from '../utils/date';
 import { TtlCache } from '../utils/cache';
 
 const STATE_ORDER = [
@@ -1003,7 +1003,7 @@ export class DashboardService {
     const chartPeriodLabel = (period: string): string =>
       indicator === 'FCM' ? monthLabel(period) : shortDate(period);
     const from = filters.from ?? (meta.lastClosedMonth ? addMonths(meta.lastClosedMonth, -5) : null);
-    const to = filters.to ?? meta.lastClosedMonth;
+    const to = filters.to ?? (meta.lastClosedMonth ? endOfMonth(meta.lastClosedMonth) : null);
     const baseFilters: Filters = {
       ...filters,
       years: [],

@@ -1,5 +1,5 @@
 import { Filters, MetaInfo, ViewId } from '../types';
-import { addMonths, monthOf, yearOf } from './date';
+import { addMonths, endOfMonth, monthOf, yearOf } from './date';
 
 export const VIEW_IDS: ViewId[] = [
   'resumen',
@@ -59,7 +59,7 @@ export function defaultFiltersForView(view: ViewId, meta: MetaInfo): Filters {
   if (view === 'evolucion') {
     if (month) {
       filters.from = addMonths(month, -5);
-      filters.to = month;
+      filters.to = endOfMonth(month);
     }
     return filters;
   }

@@ -11,7 +11,7 @@ import {
   WeeklyRow
 } from '../types';
 import { env } from '../config/env';
-import { formatMonthLabel, formatWeekLabel, monthOf, yearOf } from '../utils/date';
+import { endOfMonth, formatMonthLabel, formatWeekLabel, monthOf, yearOf } from '../utils/date';
 import { STATE_LABELS } from '../utils/calc';
 import { TtlCache } from '../utils/cache';
 
@@ -239,7 +239,7 @@ export class SqlServerRepository implements DashboardRepository {
         months: lastClosedWeek ? [monthOf(lastClosedWeek)] : [],
         weeks: lastClosedWeek ? [lastClosedWeek] : [],
         from: lastClosedMonth ?? undefined,
-        to: lastClosedMonth ?? undefined
+        to: lastClosedMonth ? endOfMonth(lastClosedMonth) : undefined
       }
     };
     this.metaCache.set('meta', meta);
