@@ -81,5 +81,26 @@ services:
       sqlserver:
         condition: service_healthy
 
+  # Administración web de las dos bases (CloudBeaver). Solo accesible con dominio propio.
+  cloudbeaver:
+    build:
+      context: .
+      dockerfile: docker/cloudbeaver/Dockerfile
+    environment:
+      CLOUDBEAVER_APP_ANONYMOUS_ACCESS_ENABLED: "false"
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?define MSSQL_SA_PASSWORD}
+    volumes:
+      - cloudbeaver-data:/opt/cloudbeaver/workspace
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "</dev/tcp/127.0.0.1/8978"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
 volumes:
   mssql-data:
+  cloudbeaver-data:

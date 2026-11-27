@@ -1,0 +1,58 @@
+{
+  "folders": {},
+  "connections": {
+    "salud-cerebral-oltp": {
+      "provider": "sqlserver",
+      "driver": "microsoft",
+      "name": "SQL Server OLTP (salud cerebral)",
+      "description": "Base transaccional del piloto Trujillo",
+      "save-password": true,
+      "read-only": false,
+      "configuration": {
+        "host": "sqlserver",
+        "port": "1433",
+        "database": "prevencion_cognitiva_oltp",
+        "url": "jdbc:sqlserver://sqlserver:1433;databaseName=prevencion_cognitiva_oltp;encrypt=true;trustServerCertificate=true;",
+        "configurationType": "MANUAL",
+        "type": "dev",
+        "auth-model": "sqlserver_database"
+      },
+      "auth-properties": {
+        "userName": "sa",
+        "userPassword": "__MSSQL_SA_PASSWORD__"
+      }
+    },
+    "salud-cerebral-mart": {
+      "provider": "sqlserver",
+      "driver": "microsoft",
+      "name": "SQL Server Data Mart (salud cerebral)",
+      "description": "Base dimensional: dimensiones, hechos, vistas bi y reportes",
+      "save-password": true,
+      "read-only": false,
+      "configuration": {
+        "host": "sqlserver",
+        "port": "1433",
+        "database": "prevencion_cognitiva_mart",
+        "url": "jdbc:sqlserver://sqlserver:1433;databaseName=prevencion_cognitiva_mart;encrypt=true;trustServerCertificate=true;",
+        "configurationType": "MANUAL",
+        "type": "dev",
+        "auth-model": "sqlserver_database"
+      },
+      "auth-properties": {
+        "userName": "sa",
+        "userPassword": "__MSSQL_SA_PASSWORD__"
+      }
+    }
+  },
+  "connection-types": {
+    "dev": {
+      "name": "Development",
+      "color": "255,255,255",
+      "description": "Bases del piloto de salud cerebral",
+      "auto-commit": true,
+      "confirm-execute": false,
+      "confirm-data-change": false,
+      "read-only": false
+    }
+  }
+}

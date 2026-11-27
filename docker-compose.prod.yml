@@ -9,3 +9,5 @@ services:
     restart: unless-stopped
   frontend:
     restart: unless-stopped
+  cloudbeaver:
+    restart: unless-stopped
