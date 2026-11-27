@@ -2,8 +2,16 @@ import React, { useState, useEffect } from 'react';
 import api from '../../api/client';
 import { FileSpreadsheet, Download, Printer, Filter, CheckCircle2, AlertCircle, Database, RefreshCw } from 'lucide-react';
 
-export const ReportesAdmin: React.FC = () => {
-  const [tipoReporte, setTipoReporte] = useState<'actividad' | 'social' | 'cardio'>('actividad');
+// Colores oficiales del informe: Óptimo/Bueno, Regular, Malo, pendiente y sin meta.
+const badgeEstado = (estado: string) => {
+  if (estado === 'Óptimo' || estado === 'Bueno') return 'bg-emerald-100 text-emerald-800';
+  if (estado === 'Regular') return 'bg-amber-100 text-amber-800';
+  if (estado === 'Malo') return 'bg-rose-100 text-rose-800';
+  if (estado === 'Sin meta') return 'bg-gray-100 text-gray-500';
+  return 'bg-slate-200 text-slate-600';
+};
+
+export const ReportesAdmin: React.FC = () => {  const [tipoReporte, setTipoReporte] = useState<'actividad' | 'social' | 'cardio'>('actividad');
   const [reporteData, setReporteData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refrescandoMart, setRefrescandoMart] = useState(false);
@@ -279,12 +287,7 @@ export const ReportesAdmin: React.FC = () => {
                     )}
 
                     <td className="py-3 px-4">
-                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
-                        f.estado.includes('Meta') || f.estado.includes('Excelente') ? 'bg-emerald-100 text-emerald-800' :
-                        f.estado.includes('progreso') ? 'bg-amber-100 text-amber-800' :
-                        f.estado.includes('inicial') ? 'bg-orange-100 text-orange-800' :
-                        f.estado.includes('pendientes') ? 'bg-slate-200 text-slate-600' : 'bg-rose-100 text-rose-800'
-                      }`}>
+                      <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${badgeEstado(f.estado)}`}>
                         {f.estado}
                       </span>
                     </td>

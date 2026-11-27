@@ -24,34 +24,35 @@ export const PESOS_SALUD_CEREBRAL = {
   CARDIOMETABOLICO: 0.30,
 };
 
+// Estados oficiales del informe (CAF: 100/70/50; CCS y FCM: 100/0).
 export const ESTADOS_KPI = {
-  META_LOGRADA: {
-    codigo: 'META_LOGRADA',
-    label: '¡Meta lograda!',
+  OPTIMO: {
+    codigo: 'OPTIMO',
+    label: 'Óptimo',
+    color: '#059669', // Verde
+    badgeClass: 'bg-emerald-50 text-emerald-800 border-emerald-300',
+    descripcionMotivacional: 'Cumpliste la meta completa. Tu constancia protege tu salud cerebral y reduce el riesgo de deterioro.'
+  },
+  BUENO: {
+    codigo: 'BUENO',
+    label: 'Bueno',
     color: '#10B981', // Verde esmeralda
     badgeClass: 'bg-emerald-50 text-emerald-700 border-emerald-300',
-    descripcionMotivacional: '¡Excelente trabajo! Tu constancia protege tu salud cerebral y reduce el riesgo de deterioro.'
+    descripcionMotivacional: 'Vas por buen camino. Sostén el ritmo para cerrar el periodo dentro de la meta.'
   },
-  EN_PROGRESO: {
-    codigo: 'EN_PROGRESO',
-    label: 'En progreso',
+  REGULAR: {
+    codigo: 'REGULAR',
+    label: 'Regular',
     color: '#F59E0B', // Ámbar
     badgeClass: 'bg-amber-50 text-amber-700 border-amber-300',
-    descripcionMotivacional: '¡Vas muy bien! Estás a un paso de alcanzar tu meta de la semana. ¡Sigue adelante!'
+    descripcionMotivacional: 'Avance parcial. Aún puedes alcanzar la meta si mantienes el registro y la constancia.'
   },
-  AVANCE_INICIAL: {
-    codigo: 'AVANCE_INICIAL',
-    label: 'Avance inicial',
-    color: '#F97316', // Naranja
-    badgeClass: 'bg-orange-50 text-orange-700 border-orange-300',
-    descripcionMotivacional: '¡Buen comienzo! Cada paso suma, te falta poco para subir al siguiente nivel de protección.'
-  },
-  SIN_ACTIVIDAD_CONFIRMADO: {
-    codigo: 'SIN_ACTIVIDAD_CONFIRMADO',
-    label: 'Sin actividad/contacto',
-    color: '#EF4444', // Coral suave
+  MALO: {
+    codigo: 'MALO',
+    label: 'Malo',
+    color: '#EF4444', // Coral
     badgeClass: 'bg-rose-50 text-rose-700 border-rose-300',
-    descripcionMotivacional: 'Confirmaste que no realizaste actividad. ¡Hoy es una nueva oportunidad para reactivarte!'
+    descripcionMotivacional: 'Cumplimiento bajo. Hoy es una nueva oportunidad para reactivar tus hábitos protectores.'
   },
   DATOS_PENDIENTES: {
     codigo: 'DATOS_PENDIENTES',
@@ -65,9 +66,33 @@ export const ESTADOS_KPI = {
     label: 'Sin meta',
     color: '#94A3B8',
     badgeClass: 'bg-gray-100 text-gray-500 border-gray-300',
-    descripcionMotivacional: 'Aún no defines una meta vigente para este periodo. Configúrala en la pestaña de metas.'
+    descripcionMotivacional: 'Aún no tienes una meta o un control programado para este periodo.'
   }
 } as const;
+
+export type EstadoKpiClave = keyof typeof ESTADOS_KPI;
+
+/**
+ * Clasificación oficial del informe. Recibe el porcentaje sin redondear:
+ * 69.96 % es Regular, aunque se muestre como 70.0 %.
+ */
+export function clasificarIndicador(
+  codigo: 'CAF' | 'CCS' | 'FCM',
+  porcentaje: number | null | undefined
+): EstadoKpiClave {
+  if (porcentaje === null || porcentaje === undefined || Number.isNaN(porcentaje)) {
+    return 'DATOS_PENDIENTES';
+  }
+  if (codigo === 'CAF') {
+    if (porcentaje >= 100) return 'OPTIMO';
+    if (porcentaje >= 70) return 'BUENO';
+    if (porcentaje >= 50) return 'REGULAR';
+    return 'MALO';
+  }
+  if (porcentaje >= 100) return 'BUENO';
+  if (porcentaje > 0) return 'REGULAR';
+  return 'MALO';
+}
 
 export const CATEGORIAS_RIESGO = {
   BAJO: { codigo: 'BAJO', label: 'Riesgo Bajo', min: 80, max: 100, color: '#10B981' },

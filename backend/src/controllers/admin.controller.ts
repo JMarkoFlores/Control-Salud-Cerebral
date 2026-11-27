@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { AdminRepository } from '../repositories/admin.repository';
 import { AlertaRepository } from '../repositories/alerta.repository';
 import { LogroRepository } from '../repositories/logro.repository';
+import { ESTADOS_KPI, clasificarIndicador } from '../config/constants';
 import { getMondayOfCurrentWeek, getFirstDayOfMonth } from '../utils/dateUtils';
 import { isValidEmail, normalizeEmail, passwordPolicyError } from '../utils/password';
 
@@ -44,18 +45,16 @@ export class AdminController {
 
       // Calcular subtotales evaluables: excluir semanas con días pendientes o sin meta
       const filasProcesadas = registros.map(r => {
-        const esEvaluable = r.dias_pendientes === 0;
-        const porcentaje = esEvaluable && r.meta_minutos > 0
-          ? Math.round((r.minutos_logrados / r.meta_minutos) * 1000) / 10
+        const esEvaluable = r.dias_pendientes === 0 && r.meta_minutos > 0;
+        const porcentajeCrudo = esEvaluable
+          ? (r.minutos_logrados / r.meta_minutos) * 100
           : null;
-
-        let estado = 'Datos pendientes';
-        if (esEvaluable) {
-          if (r.minutos_logrados === 0) estado = 'Sin actividad';
-          else if (porcentaje !== null && porcentaje >= 80) estado = '¡Meta lograda!';
-          else if (porcentaje !== null && porcentaje >= 50) estado = 'En progreso';
-          else estado = 'Avance inicial';
-        }
+        const porcentaje = porcentajeCrudo !== null
+          ? Math.round(porcentajeCrudo * 10) / 10
+          : null;
+        const estado = porcentajeCrudo !== null
+          ? ESTADOS_KPI[clasificarIndicador('CAF', porcentajeCrudo)].label
+          : 'Datos pendientes';
 
         return {
           ...r,
@@ -101,18 +100,16 @@ export class AdminController {
       const registros = await this.adminRepo.getReporteSemanalSocial(inicioSemana);
 
       const filasProcesadas = registros.map(r => {
-        const esEvaluable = r.dias_pendientes === 0;
-        const porcentaje = esEvaluable && r.meta_dias > 0
-          ? Math.round((r.dias_con_contacto / r.meta_dias) * 1000) / 10
+        const esEvaluable = r.dias_pendientes === 0 && r.meta_dias > 0;
+        const porcentajeCrudo = esEvaluable
+          ? (r.dias_con_contacto / r.meta_dias) * 100
           : null;
-
-        let estado = 'Datos pendientes';
-        if (esEvaluable) {
-          if (r.dias_con_contacto === 0) estado = 'Sin contacto';
-          else if (porcentaje !== null && porcentaje >= 80) estado = '¡Meta lograda!';
-          else if (porcentaje !== null && porcentaje >= 50) estado = 'En progreso';
-          else estado = 'Avance inicial';
-        }
+        const porcentaje = porcentajeCrudo !== null
+          ? Math.round(porcentajeCrudo * 10) / 10
+          : null;
+        const estado = porcentajeCrudo !== null
+          ? ESTADOS_KPI[clasificarIndicador('CCS', porcentajeCrudo)].label
+          : 'Datos pendientes';
 
         return {
           ...r,
@@ -157,18 +154,18 @@ export class AdminController {
       const registros = await this.adminRepo.getReporteMensualCardiometabolico(mesPeriodo);
 
       const filasProcesadas = registros.map(r => {
-        const esEvaluable = r.total_programados > 0 && r.controles_realizados > 0;
-        const porcentaje = r.total_programados > 0
-          ? Math.round((r.controles_en_meta / r.total_programados) * 1000) / 10
+        const esEvaluable = r.total_programados > 0 && r.controles_realizados === r.total_programados;
+        const porcentajeCrudo = r.total_programados > 0
+          ? (r.controles_en_meta / r.total_programados) * 100
           : null;
-
-        let estado = 'Pendiente de control';
-        if (esEvaluable) {
-          if (r.controles_en_meta === 0) estado = 'Ninguno en meta';
-          else if (porcentaje !== null && porcentaje >= 75) estado = '¡Excelente control!';
-          else if (porcentaje !== null && porcentaje >= 50) estado = 'En progreso';
-          else estado = 'Avance inicial';
-        }
+        const porcentaje = porcentajeCrudo !== null
+          ? Math.round(porcentajeCrudo * 10) / 10
+          : null;
+        const estado = r.total_programados === 0
+          ? ESTADOS_KPI.SIN_META.label
+          : esEvaluable
+            ? ESTADOS_KPI[clasificarIndicador('FCM', porcentajeCrudo)].label
+            : ESTADOS_KPI.DATOS_PENDIENTES.label;
 
         return {
           ...r,

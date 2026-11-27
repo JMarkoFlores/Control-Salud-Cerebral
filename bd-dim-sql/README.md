@@ -146,7 +146,7 @@ No se evalúan como controles programados los resultados libres que no tengan `c
 
 ## 4. Indicadores y estados
 
-Se mantiene el informe `INFORME-FINAL-FINAL` y no se adoptan los rangos motivacionales (80%, 75%, etc.) de la versión actual del código de la aplicación.
+La aplicación y el Data Mart comparten los mismos límites del informe: CAF 100/70/50 y CCS/FCM 100/0. Los estados `Óptimo`, `Bueno`, `Regular` y `Malo` se calculan con el porcentaje sin redondear; el redondeo es solo de presentación.
 
 | Indicador | Fórmula | Estados de cumplimiento |
 |---|---|---|

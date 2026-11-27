@@ -1,6 +1,6 @@
 import { HabitoRepository } from '../repositories/habito.repository';
 import { ControlRepository } from '../repositories/control.repository';
-import { ESTADOS_KPI } from '../config/constants';
+import { ESTADOS_KPI, clasificarIndicador } from '../config/constants';
 import { getMondayOfCurrentWeek, getSundayOfCurrentWeek, getFirstDayOfMonth, getTodayString, formatDateYMD, parseToDate } from '../utils/dateUtils';
 
 export interface KpiResult {
@@ -96,24 +96,10 @@ export class KpiService {
       };
     }
 
-    // Calcular porcentaje
-    const porcentaje = Math.round((totalMinutos / meta.valor_meta) * 1000) / 10; // 1 decimal
-
-    // Determinar estado
-    let estado: typeof ESTADOS_KPI[keyof typeof ESTADOS_KPI] = ESTADOS_KPI.AVANCE_INICIAL;
-    let frase = `¡Buen comienzo! Llevas ${totalMinutos} de ${meta.valor_meta} min. Cada caminata suma para tu salud cerebral.`;
-
-    if (totalMinutos === 0) {
-      estado = ESTADOS_KPI.SIN_ACTIVIDAD_CONFIRMADO;
-      frase = 'Aún no registras actividad física esta semana. ¡Anímate a dar una caminata ligera hoy!';
-    } else if (porcentaje >= 80) {
-      estado = ESTADOS_KPI.META_LOGRADA;
-      frase = `¡Excelente trabajo! Has completado ${porcentaje}% de tu meta (${totalMinutos} min). Tu constancia protege tu cerebro.`;
-    } else if (porcentaje >= 50) {
-      estado = ESTADOS_KPI.EN_PROGRESO;
-      const faltan = meta.valor_meta - totalMinutos;
-      frase = `¡Vas muy bien! Estás al ${porcentaje}% de tu meta. Solo te faltan ${faltan > 0 ? faltan : 0} min para la meta dorada.`;
-    }
+    // Calcular porcentaje y clasificar con el valor sin redondear.
+    const porcentajeCrudo = (totalMinutos / meta.valor_meta) * 100;
+    const porcentaje = Math.round(porcentajeCrudo * 10) / 10; // 1 decimal para mostrar
+    const estado = ESTADOS_KPI[clasificarIndicador('CAF', porcentajeCrudo)];
 
     return {
       codigoKpi: 'CAF',
@@ -124,7 +110,9 @@ export class KpiService {
       denominador: meta.valor_meta,
       unidad: 'minutos',
       estado,
-      mensajeMotivador: frase,
+      mensajeMotivador: totalMinutos === 0
+        ? 'No registraste actividad física esta semana. ¡Anímate a dar una caminata ligera hoy!'
+        : `Llevas ${totalMinutos} de ${meta.valor_meta} min. ${estado.descripcionMotivacional}`,
       esEvaluable: true,
       diasPendientes: diasSinConfirmarPasados,
     };
@@ -196,21 +184,9 @@ export class KpiService {
       };
     }
 
-    const porcentaje = Math.round((diasConContacto / meta.valor_meta) * 1000) / 10;
-
-    let estado: typeof ESTADOS_KPI[keyof typeof ESTADOS_KPI] = ESTADOS_KPI.AVANCE_INICIAL;
-    let frase = `Has conectado ${diasConContacto} de ${meta.valor_meta} días. El contacto cercano nutre las redes neuronales.`;
-
-    if (diasConContacto === 0) {
-      estado = ESTADOS_KPI.SIN_ACTIVIDAD_CONFIRMADO;
-      frase = 'No registraste contacto social esta semana. Una breve llamada o café con un amigo marca la diferencia.';
-    } else if (porcentaje >= 80) {
-      estado = ESTADOS_KPI.META_LOGRADA;
-      frase = `¡Excelente! Has alcanzado ${porcentaje}% de tu meta de conexión social (${diasConContacto} días).`;
-    } else if (porcentaje >= 50) {
-      estado = ESTADOS_KPI.EN_PROGRESO;
-      frase = `¡Muy buen avance! ${diasConContacto} días de interacción esta semana. ¡Sigue fortaleciendo tus lazos!`;
-    }
+    const porcentajeCrudo = (diasConContacto / meta.valor_meta) * 100;
+    const porcentaje = Math.round(porcentajeCrudo * 10) / 10;
+    const estado = ESTADOS_KPI[clasificarIndicador('CCS', porcentajeCrudo)];
 
     return {
       codigoKpi: 'CCS',
@@ -221,7 +197,9 @@ export class KpiService {
       denominador: meta.valor_meta,
       unidad: 'días',
       estado,
-      mensajeMotivador: frase,
+      mensajeMotivador: diasConContacto === 0
+        ? 'No registraste contacto social esta semana. Una breve llamada o café con un amigo marca la diferencia.'
+        : `Has conectado ${diasConContacto} de ${meta.valor_meta} días. ${estado.descripcionMotivacional}`,
       esEvaluable: true,
       diasPendientes: diasSinConfirmarPasados,
     };
@@ -252,25 +230,13 @@ export class KpiService {
     const totalProgramados = controles.length;
     const enMeta = controles.filter(c => c.dentro_de_meta === 1 || c.dentro_de_meta === true).length;
     const conResultado = controles.filter(c => c.resultado_id !== null).length;
-
-    const porcentaje = Math.round((enMeta / totalProgramados) * 1000) / 10;
-
-    let estado: typeof ESTADOS_KPI[keyof typeof ESTADOS_KPI] = ESTADOS_KPI.AVANCE_INICIAL;
-    let frase = `${enMeta} de ${totalProgramados} controles dentro de los rangos clínicos óptimos.`;
-
-    if (conResultado === 0) {
-      estado = ESTADOS_KPI.DATOS_PENDIENTES;
-      frase = 'Tienes controles pendientes por realizar este mes. Recuerda medir tu presión, glucosa o IMC.';
-    } else if (porcentaje >= 75) {
-      estado = ESTADOS_KPI.META_LOGRADA;
-      frase = `¡Excelente control cardiometabólico! (${enMeta}/${totalProgramados} en meta). La salud cardiovascular protege tu cerebro.`;
-    } else if (porcentaje >= 50) {
-      estado = ESTADOS_KPI.EN_PROGRESO;
-      frase = `Control en progreso (${enMeta}/${totalProgramados}). Mantén una dieta saludable y hábitos activos.`;
-    } else if (enMeta === 0 && conResultado > 0) {
-      estado = ESTADOS_KPI.SIN_ACTIVIDAD_CONFIRMADO;
-      frase = 'Ninguno de los controles registrados está actualmente en rango ideal. Consulta a tu médico de cabecera.';
-    }
+    const porcentajeCrudo = (enMeta / totalProgramados) * 100;
+    const porcentaje = Math.round(porcentajeCrudo * 10) / 10;
+    const pendientes = totalProgramados - conResultado;
+    // El informe sólo evalúa FCM cuando todos los factores previstos tienen resultado.
+    const estado = pendientes > 0
+      ? ESTADOS_KPI.DATOS_PENDIENTES
+      : ESTADOS_KPI[clasificarIndicador('FCM', porcentajeCrudo)];
 
     return {
       codigoKpi: 'FCM',
@@ -281,8 +247,10 @@ export class KpiService {
       denominador: totalProgramados,
       unidad: 'controles',
       estado,
-      mensajeMotivador: frase,
-      esEvaluable: true,
+      mensajeMotivador: pendientes > 0
+        ? `Tienes ${pendientes} de ${totalProgramados} controles pendientes por realizar este mes.`
+        : `${enMeta} de ${totalProgramados} controles dentro de los rangos clínicos óptimos. ${estado.descripcionMotivacional}`,
+      esEvaluable: pendientes === 0,
       detalles: controles,
     };
   }
