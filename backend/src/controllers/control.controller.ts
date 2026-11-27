@@ -2,6 +2,7 @@ import { Request, Response, NextFunction } from 'express';
 import { ControlRepository } from '../repositories/control.repository';
 import { EvaluacionService } from '../services/evaluacion.service';
 import { getFirstDayOfMonth, formatDateDMY, formatDateYMD } from '../utils/dateUtils';
+import { errorPlausibilidad, evaluarDentroDeMeta } from '../utils/limitesCardiometabolicos';
 
 export class ControlController {
   private controlRepo = new ControlRepository();
@@ -91,23 +92,15 @@ export class ControlController {
         return;
       }
 
-      // Validación para presión arterial
-      if (tipo_control === 'Presión arterial') {
-        if (valor_sistolica === undefined || valor_diastolica === undefined || valor_sistolica === null || valor_diastolica === null) {
-          res.status(400).json({
-            success: false,
-            error: { message: 'La presión arterial exige el par de valores: sistólica y diastólica.' },
-          });
-          return;
-        }
-      } else {
-        if (valor_numerico === undefined || valor_numerico === null) {
-          res.status(400).json({
-            success: false,
-            error: { message: `Para ${tipo_control} se requiere ingresar el valor numérico medido.` },
-          });
-          return;
-        }
+      // Validación de plausibilidad clínica del valor medido
+      const errorValor = errorPlausibilidad(tipo_control, {
+        sistolica: valor_sistolica,
+        diastolica: valor_diastolica,
+        numerico: valor_numerico,
+      });
+      if (errorValor) {
+        res.status(400).json({ success: false, error: { message: errorValor } });
+        return;
       }
 
       // Evaluar dentro_de_meta si está vinculado a un control programado
@@ -141,18 +134,11 @@ export class ControlController {
 
         if (ctrlRes.recordset.length > 0) {
           const ctrl = ctrlRes.recordset[0];
-          if (tipo_control === 'Presión arterial') {
-            const sis = parseFloat(valor_sistolica);
-            const dia = parseFloat(valor_diastolica);
-            const maxSis = ctrl.valor_meta_max ? parseFloat(ctrl.valor_meta_max) : 120;
-            const maxDia = ctrl.valor_meta_max_diast ? parseFloat(ctrl.valor_meta_max_diast) : 80;
-            dentro_de_meta = sis <= maxSis && dia <= maxDia;
-          } else {
-            const val = parseFloat(valor_numerico);
-            const min = ctrl.valor_meta_min !== null ? parseFloat(ctrl.valor_meta_min) : -Infinity;
-            const max = ctrl.valor_meta_max !== null ? parseFloat(ctrl.valor_meta_max) : Infinity;
-            dentro_de_meta = val >= min && val <= max;
-          }
+          dentro_de_meta = evaluarDentroDeMeta(
+            tipo_control,
+            { sistolica: valor_sistolica, diastolica: valor_diastolica, numerico: valor_numerico },
+            { min: ctrl.valor_meta_min, max: ctrl.valor_meta_max, maxDiast: ctrl.valor_meta_max_diast },
+          );
         }
       }
 

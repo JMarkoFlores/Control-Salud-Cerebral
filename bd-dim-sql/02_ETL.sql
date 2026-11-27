@@ -355,11 +355,17 @@ WITH ControlesBase AS (
     SELECT b.*,
            CASE
                WHEN b.meta_evaluable = 1 AND b.id_tipo_seguimiento = N'PRESION_ARTERIAL'
-               THEN CASE WHEN b.valor_sistolica <= b.valor_meta_max
-                           AND b.valor_diastolica <= b.valor_meta_max_diast
+               THEN CASE WHEN b.valor_sistolica BETWEEN
+                              COALESCE(b.valor_meta_min, 90) AND COALESCE(b.valor_meta_max, 120)
+                          AND b.valor_diastolica BETWEEN 60 AND COALESCE(b.valor_meta_max_diast, 80)
+                          AND b.valor_sistolica > b.valor_diastolica
                          THEN 1 ELSE 0 END
                WHEN b.meta_evaluable = 1
-               THEN CASE WHEN (b.valor_meta_min IS NULL OR b.valor_numerico >= b.valor_meta_min)
+               THEN CASE WHEN b.valor_numerico >= COALESCE(b.valor_meta_min, CASE b.id_tipo_seguimiento
+                                                                           WHEN N'GLUCOSA' THEN 70
+                                                                           WHEN N'COLESTEROL_LDL' THEN 10
+                                                                           WHEN N'IMC' THEN 18.5
+                                                                       END)
                            AND (b.valor_meta_max IS NULL OR b.valor_numerico <= b.valor_meta_max)
                          THEN 1 ELSE 0 END
            END AS dentro_calculado

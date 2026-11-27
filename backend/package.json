@@ -15,7 +15,7 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "test:db": "tsx src/scripts/testDb.ts",
-    "test:unit": "tsx --test src/utils/password.test.ts",
+    "test:unit": "tsx --test src/utils/*.test.ts",
     "db:seed": "tsx src/scripts/seedDb.ts"
   },
   "dependencies": {
