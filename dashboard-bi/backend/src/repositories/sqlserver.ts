@@ -187,7 +187,9 @@ export class SqlServerRepository implements DashboardRepository {
     addIn('anio', filters.years);
 
     if (granularity === 'week') {
-      if (filters.months.length > 0) addIn('mes', filters.months);
+      // v_IndicadoresSemanales no tiene columna `mes`; el mes se obtiene del
+      // lunes del periodo (misma regla que usa la vista para asignar semanas).
+      if (filters.months.length > 0) where.in('MONTH(v.periodo)', filters.months);
       addIn('periodo', filters.weeks);
     } else {
       if (filters.weeks.length > 0) {
