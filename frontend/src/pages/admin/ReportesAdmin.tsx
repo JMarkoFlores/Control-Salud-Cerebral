@@ -1,11 +1,34 @@
 import React, { useState, useEffect } from 'react';
 import api from '../../api/client';
-import { FileSpreadsheet, Download, Printer, Filter, CheckCircle2, AlertCircle } from 'lucide-react';
+import { FileSpreadsheet, Download, Printer, Filter, CheckCircle2, AlertCircle, Database, RefreshCw } from 'lucide-react';
 
 export const ReportesAdmin: React.FC = () => {
   const [tipoReporte, setTipoReporte] = useState<'actividad' | 'social' | 'cardio'>('actividad');
   const [reporteData, setReporteData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [refrescandoMart, setRefrescandoMart] = useState(false);
+  const [mensajeMart, setMensajeMart] = useState<{ tipo: 'ok' | 'error'; texto: string } | null>(null);
+
+  const actualizarDataMart = async () => {
+    try {
+      setRefrescandoMart(true);
+      setMensajeMart(null);
+      const res = await api.post('/admin/datamart/refresh');
+      const data = res.data.data;
+      setMensajeMart({
+        tipo: 'ok',
+        texto: `Data Mart actualizado: ${data.filas.habitos} filas de hábitos y ${data.filas.controles} de controles (${(data.duracionMs / 1000).toFixed(1)} s). Corte: ${data.fechaCorte || 'sin datos'}.`,
+      });
+      fetchReporte();
+    } catch (e: any) {
+      setMensajeMart({
+        tipo: 'error',
+        texto: e?.response?.data?.error?.message || 'No se pudo actualizar el Data Mart.',
+      });
+    } finally {
+      setRefrescandoMart(false);
+    }
+  };
 
   const fetchReporte = async () => {
     try {
@@ -73,7 +96,20 @@ export const ReportesAdmin: React.FC = () => {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={actualizarDataMart}
+            disabled={refrescandoMart}
+            className="px-3.5 py-2 rounded-xl border border-emerald-300 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-60 disabled:cursor-not-allowed"
+            title="Ejecuta el ETL 03 y 04 para actualizar la base dimensional"
+          >
+            {refrescandoMart ? (
+              <RefreshCw className="w-4 h-4 animate-spin" />
+            ) : (
+              <Database className="w-4 h-4" />
+            )}
+            <span>{refrescandoMart ? 'Actualizando...' : 'Actualizar Data Mart'}</span>
+          </button>
           <button
             onClick={() => window.print()}
             className="px-3.5 py-2 rounded-xl border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs flex items-center gap-1.5 shadow-sm transition-colors"
@@ -90,6 +126,23 @@ export const ReportesAdmin: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {mensajeMart && (
+        <div
+          className={`flex items-start gap-2 rounded-xl border px-4 py-3 text-xs font-semibold ${
+            mensajeMart.tipo === 'ok'
+              ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+              : 'border-rose-200 bg-rose-50 text-rose-800'
+          }`}
+        >
+          {mensajeMart.tipo === 'ok' ? (
+            <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
+          ) : (
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+          )}
+          <span>{mensajeMart.texto}</span>
+        </div>
+      )}
 
       {/* Selector de Tipo de Reporte */}
       <div className="flex gap-2 border-b border-slate-200">

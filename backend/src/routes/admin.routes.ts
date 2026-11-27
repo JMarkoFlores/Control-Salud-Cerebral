@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { AdminController } from '../controllers/admin.controller';
+import { DataMartController } from '../controllers/datamart.controller';
 import { authenticateJWT } from '../middlewares/auth.middleware';
 import { requireRole } from '../middlewares/role.middleware';
 
 const router = Router();
 const controller = new AdminController();
+const datamartController = new DataMartController();
 
 router.use(authenticateJWT);
 router.use(requireRole(['ADMIN']));
@@ -21,6 +23,9 @@ router.delete('/usuarios/:id', controller.eliminarUsuario);
 router.get('/reportes/actividad', controller.getReporteActividad);
 router.get('/reportes/social', controller.getReporteSocial);
 router.get('/reportes/cardio', controller.getReporteCardio);
+
+// Refresco manual del Data Mart dimensional (ETL 03 + 04)
+router.post('/datamart/refresh', datamartController.refresh);
 
 // Reglas de alerta
 router.get('/reglas', controller.getReglas);
