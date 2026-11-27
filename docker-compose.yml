@@ -81,5 +81,17 @@ services:
       sqlserver:
         condition: service_healthy
 
+  # Diagnóstico de red interno (solo perfil debug).
+  netcheck:
+    image: busybox:1.36
+    profiles: ["debug"]
+    command:
+      - sh
+      - -c
+      - "nslookup backend; wget -q -T 5 -O - http://backend:4000/api/v1/health; echo EXIT=$?"
+    depends_on:
+      backend:
+        condition: service_healthy
+
 volumes:
   mssql-data:
