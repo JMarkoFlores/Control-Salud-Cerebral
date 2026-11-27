@@ -71,6 +71,7 @@ services:
     environment:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?define MSSQL_SA_PASSWORD}
       SEED_DATA: ${SEED_DATA:-false}
+      RESET_DB: ${RESET_DB:-false}
     entrypoint: ["/bin/bash", "/scripts/init.sh"]
     volumes:
       - ./bd-sql:/scripts/bd-sql:ro
