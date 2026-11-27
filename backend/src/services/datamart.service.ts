@@ -22,7 +22,7 @@ export interface DataMartRefreshResult {
 }
 
 function scriptsDirectory(): string {
-  return path.resolve(__dirname, '../../../bd-dim-sql');
+  return process.env.DATAMART_SCRIPTS_DIR || path.resolve(__dirname, '../../../bd-dim-sql');
 }
 
 /** Divide el script por lotes GO y descarta los `USE`, porque la conexión ya apunta a la BD transaccional. */

@@ -1,0 +1,8 @@
+# Producción (Dokploy): sin puertos en el host; la exposición se define en Domains (Traefik).
+services:
+  sqlserver:
+    restart: unless-stopped
+  backend:
+    restart: unless-stopped
+  frontend:
+    restart: unless-stopped

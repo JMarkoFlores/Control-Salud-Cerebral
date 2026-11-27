@@ -1,0 +1,8 @@
+# Solo para pruebas locales en la laptop. No usar en Dokploy.
+services:
+  sqlserver:
+    ports:
+      - "1433:1433"
+  backend:
+    ports:
+      - "4000:4000"
