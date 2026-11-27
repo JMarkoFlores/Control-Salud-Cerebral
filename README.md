@@ -165,7 +165,8 @@ Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1
 | :--- | :--- |
 | `MSSQL_SA_PASSWORD` | contraseña fuerte, mínimo 8 caracteres con mayúscula, minúscula, número y símbolo |
 | `JWT_SECRET` | cadena aleatoria de 32+ caracteres |
-| `SEED_DATA` | `true` solo para la primera carga de datos demo |
+| `SEED_DATA` | `true` solo para la primera carga de datos demo; luego `false` |
+| `RESET_DB` | `true` para eliminar ambas bases antes de reinicializar; dejar `false` en operación normal |
 | `DB_DATABASE` | `prevencion_cognitiva_oltp` |
 | `MSSQL_MEMORY_LIMIT_MB` | `1536` |
 | `TZ` | `America/Lima` |
@@ -173,12 +174,19 @@ Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1
 ### 6.3 Pasos
 1. En Dokploy: **Create Project → Compose**, conectar el repo privado y usar `docker-compose.prod.yml`.
 2. Pegar las variables de la tabla en **Environment** y desplegar. Se construyen `sqlserver`, `backend` y `frontend`.
-3. Inicializar ambas bases (OLTP, seed opcional y Data Mart):
+3. **Domains**: dos entradas sobre el mismo host.
+   - `/` → servicio `frontend`, container port `80`.
+   - `/api` → servicio `backend`, container port `4000`.
+   Traefik resuelve por prefijo y evita depender del proxy interno de nginx.
+4. Inicializar ambas bases (OLTP, seed opcional y Data Mart):
    ```bash
    docker compose --profile init run --rm db-init
    ```
-   El job ejecuta en orden `bd-transaccional.sql`, `seed-data.sql` (si `SEED_DATA=true`), `01`–`07` de `bd-dim-sql/` y falla con `-b` ante el primer error.
-4. En **Domains**: servicio `frontend`, container port `80`, host `saludcerebral.giansmd.dev`, HTTPS con Let's Encrypt.
+   En Dokploy, el job se lanza como despliegue temporal con el campo **Command**:
+   ```text
+   compose -p <appName> -f ./docker-compose.prod.yml --profile init run --rm db-init
+   ```
+   El job ejecuta en orden `bd-transaccional.sql`, `seed-data.sql` (si `SEED_DATA=true`), `01`–`07` de `bd-dim-sql/` y falla con `-b` ante el primer error. Para reinstalar desde cero usar `RESET_DB=true` (elimina ambas bases antes de cargar).
 5. Verificar: `https://saludcerebral.giansmd.dev/api/v1/health` y login demo.
 
 ### 6.4 Actualizar el Data Mart
