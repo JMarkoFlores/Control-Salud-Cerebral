@@ -1,9 +1,0 @@
-- banner [ref=f1e511]:
-  - img "CloudBeaver Community ver. 26.2.5" [ref=f1e513] [cursor=pointer]
-  - generic [ref=f1e514]:
-    - button "Conexiones" [ref=f1e515] [cursor=pointer]
-    - generic [ref=f1e521]: Administración
-  - generic [ref=f1e551]: Cargando...
-  - menubar [ref=f1e557]:
-    - menuitem "Atajos de teclado" [ref=f1e558] [cursor=pointer]
-    - menuitem "Configuración" [ref=f1e561] [cursor=pointer]

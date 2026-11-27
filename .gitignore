@@ -80,3 +80,6 @@ $RECYCLE.BIN/
 !backend/src/scripts/testDb.ts
 backend/src/scripts/testTemp*.ts
 backend/src/scripts/fix*.ts
+
+# Snapshots temporales del navegador automatizado
+.playwright-mcp/
