@@ -28,10 +28,16 @@ if [ "${RESET_MART:-false}" = "true" ]; then
     "IF DB_ID(N'prevencion_cognitiva_mart') IS NOT NULL BEGIN ALTER DATABASE [prevencion_cognitiva_mart] SET SINGLE_USER WITH ROLLBACK IMMEDIATE; DROP DATABASE [prevencion_cognitiva_mart]; END;"
 fi
 
-run /scripts/bd-sql/bd-transaccional.sql
+OLTP_EXISTS=$("$SQLCMD" -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -b -I -h -1 -W \
+  -Q "SET NOCOUNT ON; SELECT ISNULL(DB_ID(N'prevencion_cognitiva_oltp'), 0);" | tr -d '[:space:]')
 
-if [ "${SEED_DATA:-false}" = "true" ]; then
-  run /scripts/bd-sql/seed-data.sql
+if [ "$OLTP_EXISTS" = "0" ] || [ -z "$OLTP_EXISTS" ]; then
+  run /scripts/bd-sql/bd-transaccional.sql
+  if [ "${SEED_DATA:-false}" = "true" ]; then
+    run /scripts/bd-sql/seed-data.sql
+  fi
+else
+  echo "[db-init] OLTP existente: se omite creacion y seed"
 fi
 
 run /scripts/bd-dim-sql/01_Crear_DataMart.sql
