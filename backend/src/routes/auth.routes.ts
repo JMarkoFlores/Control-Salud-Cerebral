@@ -8,6 +8,7 @@ const router = Router();
 const controller = new AuthController();
 
 router.post('/login', authLimiter, controller.login);
+router.post('/demo-login', authLimiter, controller.demoLogin);
 router.post('/registro', authLimiter, controller.registro);
 router.get('/me', authenticateJWT, controller.me);
 router.put('/cambiar-password', authenticateJWT, controller.cambiarPassword);

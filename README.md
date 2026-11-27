@@ -87,7 +87,7 @@ El sistema incluye cuentas precargadas en `seed-data.sql` con hashes reales de `
 | **TITULAR** | `carlos.mendoza@gmail.com` | `Titular123!` | Carlos Mendoza (`P-001`), 50 años, Trujillo |
 | **TITULAR 2** | `maria.flores@gmail.com` | `Titular123!` | María Flores (`P-002`), 58 años, Víctor Larco |
 
-> **Acceso Rápido:** En la pantalla de inicio de sesión (`/login`), dispones de botones de acceso rápido de prueba para iniciar sesión con un solo clic como Titular o Administrador.
+> **Acceso Rápido:** En `/login` hay botones de demo para entrar como Titular o Administrador. El frontend no guarda ni muestra contraseñas: llama a `POST /api/v1/auth/demo-login` y el backend firma la sesión. Requiere `DEMO_LOGIN_ENABLED=true`; si está en `false` el endpoint responde 404 y la app muestra un aviso.
 
 ---
 
@@ -175,6 +175,7 @@ Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1
 | `JWT_SECRET` | cadena aleatoria de 32+ caracteres (nunca reutilizar el ejemplo del repo) |
 | `CORS_ORIGINS` | vacío (solo mismo origen); lista por comas solo si el frontend vive en otro dominio |
 | `SEED_DATA` | `true` solo para la primera carga de datos demo; luego `false` |
+| `DEMO_LOGIN_ENABLED` | `true` para mostrar y habilitar los botones de acceso demo (sin contraseñas en el cliente) |
 | `RESET_DB` | `true` para eliminar ambas bases antes de reinicializar; dejar `false` en operación normal |
 | `DB_DATABASE` | `prevencion_cognitiva_oltp` |
 | `MSSQL_MEMORY_LIMIT_MB` | `1536` |

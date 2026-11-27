@@ -38,6 +38,9 @@ services:
       DB_TRUST_SERVER_CERTIFICATE: "true"
       JWT_SECRET: ${JWT_SECRET:?define JWT_SECRET}
       JWT_EXPIRES_IN: ${JWT_EXPIRES_IN:-7d}
+      DEMO_LOGIN_ENABLED: ${DEMO_LOGIN_ENABLED:-false}
+      DEMO_ADMIN_EMAIL: ${DEMO_ADMIN_EMAIL:-admin@saludcerebral.pe}
+      DEMO_TITULAR_EMAIL: ${DEMO_TITULAR_EMAIL:-carlos.mendoza@gmail.com}
       DATAMART_SCRIPTS_DIR: /app/bd-dim-sql
     depends_on:
       sqlserver:

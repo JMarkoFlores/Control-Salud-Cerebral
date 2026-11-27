@@ -7,6 +7,7 @@ interface AuthContextType {
   token: string | null;
   loading: boolean;
   login: (correo: string, pass: string) => Promise<{ success: boolean; error?: string; user?: User }>;
+  demoLogin: (rol: 'ADMIN' | 'TITULAR') => Promise<{ success: boolean; error?: string; user?: User }>;
   logout: () => void;
   isTitular: boolean;
   isAdmin: boolean;
@@ -43,15 +44,19 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   };
 
+  const persistSession = (newToken: string, userData: User) => {
+    setToken(newToken);
+    setUser(userData);
+    localStorage.setItem('token', newToken);
+    localStorage.setItem('user', JSON.stringify(userData));
+  };
+
   const login = async (correo: string, pass: string) => {
     try {
       const res = await api.post('/auth/login', { correo, password: pass });
       if (res.data.success) {
         const { token: newToken, user: userData } = res.data.data;
-        setToken(newToken);
-        setUser(userData);
-        localStorage.setItem('token', newToken);
-        localStorage.setItem('user', JSON.stringify(userData));
+        persistSession(newToken, userData);
         return { success: true, user: userData };
       }
       return { success: false, error: res.data.error?.message || 'Error al iniciar sesión' };
@@ -59,6 +64,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return {
         success: false,
         error: err.response?.data?.error?.message || 'Error de conexión con el servidor.',
+      };
+    }
+  };
+
+  const demoLogin = async (rol: 'ADMIN' | 'TITULAR') => {
+    try {
+      const res = await api.post('/auth/demo-login', { rol });
+      if (res.data.success) {
+        const { token: newToken, user: userData } = res.data.data;
+        persistSession(newToken, userData);
+        return { success: true, user: userData };
+      }
+      return { success: false, error: res.data.error?.message || 'Acceso demo no disponible' };
+    } catch (err: any) {
+      return {
+        success: false,
+        error: err.response?.data?.error?.message || 'Acceso demo no disponible.',
       };
     }
   };
@@ -77,6 +99,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         loading,
         login,
+        demoLogin,
         logout,
         isTitular: user?.rol === 'TITULAR',
         isAdmin: user?.rol === 'ADMIN',

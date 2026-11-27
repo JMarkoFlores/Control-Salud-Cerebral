@@ -3,11 +3,12 @@ import { useAuth } from '../../context/AuthContext';
 import { Brain, Lock, Mail, ArrowRight, ShieldCheck, Sparkles } from 'lucide-react';
 
 export const Login: React.FC<{ onNavigateRegister: () => void }> = ({ onNavigateRegister }) => {
-  const { login } = useAuth();
+  const { login, demoLogin } = useAuth();
   const [correo, setCorreo] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [demoLoading, setDemoLoading] = useState<'ADMIN' | 'TITULAR' | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -21,10 +22,14 @@ export const Login: React.FC<{ onNavigateRegister: () => void }> = ({ onNavigate
     }
   };
 
-  const handleDemoLogin = (email: string, pass: string) => {
-    setCorreo(email);
-    setPassword(pass);
-    login(email, pass);
+  const handleDemoLogin = async (rol: 'ADMIN' | 'TITULAR') => {
+    setError(null);
+    setDemoLoading(rol);
+    const res = await demoLogin(rol);
+    if (!res.success) {
+      setError(res.error || 'Acceso demo no disponible.');
+      setDemoLoading(null);
+    }
   };
 
   return (
@@ -50,8 +55,7 @@ export const Login: React.FC<{ onNavigateRegister: () => void }> = ({ onNavigate
             </p>
           </div>
 
-          {/* Accesos Rápidos de Prueba (Demo) — solo en desarrollo; nunca en el build de producción */}
-          {import.meta.env.DEV && (
+          {/* Accesos rápidos demo: el backend firma la sesión, aquí no viajan contraseñas. */}
           <div className="mt-8 pt-6 border-t border-white/10">
             <span className="text-[11px] font-bold text-teal-200 uppercase tracking-wider block mb-2.5 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-emerald-300" />
@@ -60,30 +64,35 @@ export const Login: React.FC<{ onNavigateRegister: () => void }> = ({ onNavigate
             <div className="space-y-2">
               <button
                 type="button"
-                onClick={() => handleDemoLogin('carlos.mendoza@gmail.com', 'Titular123!')}
-                className="w-full text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-xs flex items-center justify-between group"
+                disabled={demoLoading !== null}
+                onClick={() => handleDemoLogin('TITULAR')}
+                className="w-full text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-xs flex items-center justify-between group disabled:opacity-60 disabled:cursor-wait"
               >
                 <div>
-                  <span className="font-bold text-white block">Titular: Carlos Mendoza</span>
-                  <span className="text-[10px] text-teal-200">carlos.mendoza@gmail.com</span>
+                  <span className="font-bold text-white block">
+                    {demoLoading === 'TITULAR' ? 'Entrando...' : 'Titular: Carlos Mendoza'}
+                  </span>
+                  <span className="text-[10px] text-teal-200">Vista del participante</span>
                 </div>
                 <ArrowRight className="w-4 h-4 text-emerald-300 group-hover:translate-x-1 transition-transform" />
               </button>
 
               <button
                 type="button"
-                onClick={() => handleDemoLogin('admin@saludcerebral.pe', 'Admin123!')}
-                className="w-full text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-xs flex items-center justify-between group"
+                disabled={demoLoading !== null}
+                onClick={() => handleDemoLogin('ADMIN')}
+                className="w-full text-left px-3 py-2 rounded-xl bg-white/10 hover:bg-white/20 transition-colors text-xs flex items-center justify-between group disabled:opacity-60 disabled:cursor-wait"
               >
                 <div>
-                  <span className="font-bold text-white block">Administrador del Piloto</span>
-                  <span className="text-[10px] text-teal-200">admin@saludcerebral.pe</span>
+                  <span className="font-bold text-white block">
+                    {demoLoading === 'ADMIN' ? 'Entrando...' : 'Administrador del Piloto'}
+                  </span>
+                  <span className="text-[10px] text-teal-200">Vista del especialista</span>
                 </div>
                 <ArrowRight className="w-4 h-4 text-emerald-300 group-hover:translate-x-1 transition-transform" />
               </button>
             </div>
           </div>
-          )}
         </div>
 
         {/* Lado Derecho: Formulario */}

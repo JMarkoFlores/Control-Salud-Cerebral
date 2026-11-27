@@ -10,9 +10,50 @@ const BCRYPT_ROUNDS = 12;
 // Hash de referencia para igualar el tiempo de respuesta cuando el correo no existe.
 const DUMMY_HASH = '$2a$12$hONKU0q/qklMKzMeU5cRz.zJwe8cWlIyx6kX/LSVvRIlSdgjj1Tzi';
 
+type Account = NonNullable<Awaited<ReturnType<AuthRepository['findByEmail']>>>;
+
 export class AuthController {
   private authRepo = new AuthRepository();
   private alertaService = new AlertaService();
+
+  /** Firma el token y arma el usuario público. Reutilizado por login y demo-login. */
+  private crearSesion(account: Account) {
+    const payload = {
+      cuenta_id: account.cuenta_id,
+      persona_id: account.persona_id,
+      persona_titular_id: account.persona_titular_id,
+      correo_acceso: account.correo_acceso,
+      rol: account.rol,
+      nombres: account.nombres,
+      apellidos: account.apellidos,
+      codigo_interno: account.codigo_interno,
+    };
+
+    const token = jwt.sign(payload, env.JWT.secret, {
+      expiresIn: env.JWT.expiresIn as jwt.SignOptions['expiresIn'],
+    });
+
+    if (account.rol === 'TITULAR') {
+      this.alertaService.verificarAlertasAlLogin(account.persona_id, account.cuenta_id).catch(() => {});
+    }
+
+    return {
+      token,
+      user: {
+        cuenta_id: account.cuenta_id,
+        persona_id: account.persona_id,
+        persona_titular_id: account.persona_titular_id,
+        correo_acceso: account.correo_acceso,
+        rol: account.rol,
+        nombres: account.nombres,
+        apellidos: account.apellidos,
+        codigo_interno: account.codigo_interno,
+        distrito: account.distrito,
+        nombre_contacto: account.nombre_contacto,
+        parentesco: account.parentesco,
+      },
+    };
+  }
 
   login = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -49,44 +90,44 @@ export class AuthController {
       }
 
       // Generar JWT
-      const payload = {
-        cuenta_id: account.cuenta_id,
-        persona_id: account.persona_id,
-        persona_titular_id: account.persona_titular_id,
-        correo_acceso: account.correo_acceso,
-        rol: account.rol,
-        nombres: account.nombres,
-        apellidos: account.apellidos,
-        codigo_interno: account.codigo_interno,
-      };
-
-      const token = jwt.sign(payload, env.JWT.secret, {
-        expiresIn: env.JWT.expiresIn as jwt.SignOptions['expiresIn'],
+      res.json({
+        success: true,
+        data: this.crearSesion(account),
       });
+    } catch (error) {
+      next(error);
+    }
+  };
 
-      // Verificación ligera de alertas motivadoras al login
-      if (account.rol === 'TITULAR') {
-        this.alertaService.verificarAlertasAlLogin(account.persona_id, account.cuenta_id).catch(() => {});
+  /**
+   * Acceso de demostración: entra a una cuenta demo sin exponer credenciales en el frontend.
+   * Solo funciona con DEMO_LOGIN_ENABLED=true. El rol se limita a TITULAR o ADMIN.
+   */
+  demoLogin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      if (!env.DEMO_LOGIN.enabled) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'DEMO_LOGIN_DISABLED', message: 'El acceso de demostración no está habilitado.' },
+        });
+        return;
+      }
+
+      const rol = req.body?.rol === 'ADMIN' ? 'ADMIN' : 'TITULAR';
+      const correo = rol === 'ADMIN' ? env.DEMO_LOGIN.adminEmail : env.DEMO_LOGIN.titularEmail;
+      const account = await this.authRepo.findByEmail(correo);
+
+      if (!account || !account.autorizado || !account.activo || account.rol !== rol) {
+        res.status(404).json({
+          success: false,
+          error: { code: 'DEMO_ACCOUNT_UNAVAILABLE', message: 'La cuenta demo no está disponible.' },
+        });
+        return;
       }
 
       res.json({
         success: true,
-        data: {
-          token,
-          user: {
-            cuenta_id: account.cuenta_id,
-            persona_id: account.persona_id,
-            persona_titular_id: account.persona_titular_id,
-            correo_acceso: account.correo_acceso,
-            rol: account.rol,
-            nombres: account.nombres,
-            apellidos: account.apellidos,
-            codigo_interno: account.codigo_interno,
-            distrito: account.distrito,
-            nombre_contacto: account.nombre_contacto,
-            parentesco: account.parentesco,
-          },
-        },
+        data: this.crearSesion(account),
       });
     } catch (error) {
       next(error);

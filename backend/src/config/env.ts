@@ -42,4 +42,10 @@ export const env = {
     .filter(Boolean),
   TZ: process.env.TZ || 'America/Lima',
   GEMINI_API_KEY: process.env.GEMINI_API_KEY || '',
+  // Acceso demo: permite entrar con botones sin exponer credenciales en el frontend.
+  DEMO_LOGIN: {
+    enabled: process.env.DEMO_LOGIN_ENABLED === 'true',
+    adminEmail: process.env.DEMO_ADMIN_EMAIL || 'admin@saludcerebral.pe',
+    titularEmail: process.env.DEMO_TITULAR_EMAIL || 'carlos.mendoza@gmail.com',
+  },
 };
