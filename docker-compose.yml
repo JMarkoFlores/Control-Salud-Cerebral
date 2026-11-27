@@ -63,23 +63,69 @@ services:
       backend:
         condition: service_healthy
 
-  # Inicialización única de ambas bases (OLTP, seed y Data Mart).
-  # Ejecutar a mano: docker compose --profile init run --rm db-init
+  # Inicialización repetible de OLTP, Data Mart y permisos BI al desplegar.
   db-init:
     image: mcr.microsoft.com/mssql/server:2022-latest
-    profiles: ["init"]
     environment:
       MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?define MSSQL_SA_PASSWORD}
       SEED_DATA: ${SEED_DATA:-false}
       RESET_DB: ${RESET_DB:-false}
       RESET_MART: ${RESET_MART:-false}
+      BI_DB_USER: ${BI_DB_USER:-bi_lector}
+      BI_DB_PASSWORD: ${BI_DB_PASSWORD:?define BI_DB_PASSWORD}
     entrypoint: ["/bin/bash", "/scripts/init.sh"]
     volumes:
       - ./bd-sql:/scripts/bd-sql:ro
       - ./bd-dim-sql:/scripts/bd-dim-sql:ro
       - ./deploy/init.sh:/scripts/init.sh:ro
+      - ./deploy/bi-login.sql:/scripts/bi-login.sql:ro
     depends_on:
       sqlserver:
+        condition: service_healthy
+
+  bi-backend:
+    build:
+      context: .
+      dockerfile: dashboard-bi/backend/Dockerfile
+    environment:
+      NODE_ENV: production
+      PORT: 4001
+      TZ: ${TZ:-America/Lima}
+      DATA_SOURCE: sqlserver
+      BI_DB_SERVER: sqlserver
+      BI_DB_PORT: 1433
+      BI_DB_DATABASE: prevencion_cognitiva_mart
+      BI_DB_USER: ${BI_DB_USER:-bi_lector}
+      BI_DB_PASSWORD: ${BI_DB_PASSWORD:?define BI_DB_PASSWORD}
+      BI_DB_ENCRYPT: "true"
+      BI_DB_TRUST_SERVER_CERTIFICATE: "true"
+      ADMIN_USER: ${BI_ADMIN_USER:?define BI_ADMIN_USER}
+      ADMIN_PASSWORD_HASH: ${BI_ADMIN_PASSWORD_HASH:?define BI_ADMIN_PASSWORD_HASH}
+      JWT_SECRET: ${BI_JWT_SECRET:?define BI_JWT_SECRET}
+    depends_on:
+      db-init:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:4001/api/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))",
+        ]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  bi-frontend:
+    build:
+      context: .
+      dockerfile: dashboard-bi/frontend/Dockerfile
+      args:
+        VITE_GOOGLE_MAPS_API_KEY: ${VITE_GOOGLE_MAPS_API_KEY:-}
+    depends_on:
+      bi-backend:
         condition: service_healthy
 
   # Administración web de las dos bases (CloudBeaver). Solo accesible con dominio propio.

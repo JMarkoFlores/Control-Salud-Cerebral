@@ -166,28 +166,37 @@ Topología: `Traefik → frontend (nginx :80) → backend :4000 → sqlserver :1
 | `MSSQL_SA_PASSWORD` | contraseña fuerte, mínimo 8 caracteres con mayúscula, minúscula, número y símbolo |
 | `JWT_SECRET` | cadena aleatoria de 32+ caracteres |
 | `SEED_DATA` | `true` solo para la primera carga de datos demo; luego `false` |
-| `RESET_DB` | `true` para eliminar ambas bases antes de reinicializar; dejar `false` en operación normal |
+| `RESET_DB` | `false` en operación normal. `true` elimina ambas bases y sus datos al desplegar |
+| `RESET_MART` | `false` en operación normal. `true` elimina y reconstruye el Data Mart |
 | `DB_DATABASE` | `prevencion_cognitiva_oltp` |
 | `MSSQL_MEMORY_LIMIT_MB` | `1536` |
 | `TZ` | `America/Lima` |
+| `BI_DB_USER` | `bi_lector` (opcional; usuario SQL de solo lectura) |
+| `BI_DB_PASSWORD` | contraseña fuerte para el login BI, obligatoria |
+| `BI_ADMIN_USER` | usuario administrador único del dashboard, obligatorio |
+| `BI_ADMIN_PASSWORD_HASH` | hash bcrypt del administrador, obligatorio |
+| `BI_JWT_SECRET` | secreto JWT propio del dashboard, 32+ caracteres, obligatorio |
+| `VITE_GOOGLE_MAPS_API_KEY` | opcional; clave pública restringida al subdominio del dashboard |
+
+Define las variables BI en Dokploy **antes del primer despliegue**. El hash bcrypt
+contiene `$`; introdúcelo entre comillas simples en el campo de variables de
+Dokploy para conservarlo íntegro (por ejemplo, `'$2b$...'`). No pegues la
+contraseña en lugar del hash. Ningún secreto se guarda en una imagen o en Git.
 
 ### 6.3 Pasos
 1. En Dokploy: **Create Project → Compose**, conectar el repo privado y usar `docker-compose.prod.yml`.
-2. Pegar las variables de la tabla en **Environment** y desplegar. Se construyen `sqlserver`, `backend` y `frontend`.
+2. Pegar las variables de la tabla en **Environment** y desplegar. Se construyen `sqlserver`, `backend`, `frontend`, `bi-backend` y `bi-frontend`.
 3. **Domains**: dos entradas sobre el mismo host.
    - `/` → servicio `frontend`, container port `80`.
    - `/api` → servicio `backend`, container port `4000`.
    Traefik resuelve por prefijo y evita depender del proxy interno de nginx.
-4. Inicializar ambas bases (OLTP, seed opcional y Data Mart):
-   ```bash
-   docker compose --profile init run --rm db-init
-   ```
-   En Dokploy, el job se lanza como despliegue temporal con el campo **Command**:
-   ```text
-   compose -p <appName> -f ./docker-compose.prod.yml --profile init run --rm db-init
-   ```
-   El job ejecuta en orden `bd-transaccional.sql`, `seed-data.sql` (si `SEED_DATA=true`), `01`–`07` de `bd-dim-sql/` y falla con `-b` ante el primer error. Para reinstalar desde cero usar `RESET_DB=true` (elimina ambas bases antes de cargar).
-5. Verificar: `https://saludcerebral.giansmd.dev/api/v1/health` y login demo.
+4. `db-init` se ejecuta automáticamente en cada despliegue. Crea OLTP solo si no existe, carga el Data Mart con los pasos `01`–`07` y crea/actualiza el login `BI_DB_USER`, con permiso `SELECT` solo en el esquema `bi`. `bi-backend` espera que termine correctamente; el backend transaccional no depende de `db-init` ni del dashboard.
+5. Si necesitas datos demo, define `SEED_DATA=true` **antes del primer despliegue**. El seed solo se carga al crear OLTP; en operación normal déjalo en `false`. `RESET_DB` y `RESET_MART` deben permanecer en `false`: con `true`, el siguiente despliegue borrará respectivamente ambas bases o el Data Mart.
+6. **Domains**: conserva las rutas actuales de la app transaccional y añade un subdominio propio para el BI:
+   - `saludcerebral.giansmd.dev` → `frontend`, puerto `80` (la ruta `/api` actual continúa hacia `backend:4000`).
+   - `bi-saludcerebral.giansmd.dev` → `bi-frontend`, puerto `80`.
+   No compartas el dominio transaccional con el dashboard: ambos usan `/api` para servicios distintos.
+7. Verifica que `db-init` finalice con código 0, que los servicios queden saludables y que el dashboard abra en su subdominio. Para volver a cargar el Data Mart, redespliega o usa **Actualizar Data Mart** en la aplicación actual; el dashboard refleja el cambio al vencer su caché de cinco minutos.
 
 ### 6.4 Actualizar el Data Mart
 En **Reportes Analíticos** (rol ADMIN) está el botón **Actualizar Data Mart**. Ejecuta el ETL `03` (dimensiones) y `04` (hechos) desde la base transaccional y devuelve filas cargadas, duración y fecha de corte. El endpoint es `POST /api/v1/admin/datamart/refresh` y rechaza ejecuciones simultáneas.
@@ -205,9 +214,21 @@ docker exec -it control-salud-cerebral-lmb9cv-sqlserver-1 bash
 /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P "$MSSQL_SA_PASSWORD" -C -d prevencion_cognitiva_oltp
 ```
 
-### 6.6 Notas
+### 6.6 Copias de seguridad y recuperación
+- Programa copias de seguridad SQL de `prevencion_cognitiva_oltp` y `prevencion_cognitiva_mart` y almacénalas fuera del VPS. Por ejemplo, desde SQL Server:
+  ```sql
+  BACKUP DATABASE [prevencion_cognitiva_oltp]
+    TO DISK = N'/var/opt/mssql/data/prevencion_cognitiva_oltp.bak' WITH INIT, COMPRESSION;
+  BACKUP DATABASE [prevencion_cognitiva_mart]
+    TO DISK = N'/var/opt/mssql/data/prevencion_cognitiva_mart.bak' WITH INIT, COMPRESSION;
+  ```
+  Copia los `.bak` fuera del contenedor/volumen y rota los nombres para conservar versiones. Comprueba periódicamente que una copia se pueda restaurar.
+- Si `db-init` falla, consulta sus logs desde el primer error. No elimina datos automáticamente. Corrige la causa y vuelve a desplegar; si la inicialización dejó una base incompleta, revisa el estado de las bases o restaura una copia antes de elegir una reparación. No uses `RESET_DB=true` salvo que realmente quieras borrar OLTP y Data Mart.
+
+### 6.7 Notas
 - `msnodesqlv8` (autenticación Windows) queda como dependencia opcional: en el servidor se usa autenticación SQL con `sa`.
-- Los cambios de esquema se aplican volviendo a ejecutar el job `db-init`; los scripts `01`, `02`, `05` y `07` son idempotentes.
+- El VPS debe ser Linux x86-64 y contar con al menos 4 GB de RAM.
+- Los cambios del Data Mart se aplican al redesplegar; las tablas de hechos se recargan en una transacción y las dimensiones se actualizan por sus identificadores de origen.
 
 ---
 

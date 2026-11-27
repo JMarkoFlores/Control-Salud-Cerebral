@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+trap 'status=$?; echo "[db-init] ERROR: inicialización interrumpida (código $status). No se borraron datos automáticamente; revise el primer error anterior."; exit "$status"' ERR
 
 SQLCMD=/opt/mssql-tools18/bin/sqlcmd
 if [ ! -x "$SQLCMD" ]; then
@@ -48,4 +49,21 @@ run /scripts/bd-dim-sql/05_Vistas_Indicadores.sql
 run /scripts/bd-dim-sql/06_Validacion.sql
 run /scripts/bd-dim-sql/07_Reportes_DataMart.sql
 
-echo "[db-init] bases inicializadas"
+if [ -z "${BI_DB_USER:-}" ] || [ -z "${BI_DB_PASSWORD:-}" ]; then
+  echo "[db-init] BI_DB_USER y BI_DB_PASSWORD son obligatorios para configurar el acceso de lectura BI" >&2
+  exit 1
+fi
+if [[ ! "$BI_DB_USER" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+  echo "[db-init] BI_DB_USER solo puede contener letras, números y guion bajo; debe comenzar con letra o guion bajo" >&2
+  exit 1
+fi
+
+# Escapar comillas simples antes de pasarlo como variable de sqlcmd. El valor
+# nunca se imprime; solo la ruta del script aparece en el log.
+BI_DB_PASSWORD_SQL=$(printf '%s' "$BI_DB_PASSWORD" | sed "s/'/''/g")
+"$SQLCMD" -S sqlserver -U sa -P "$MSSQL_SA_PASSWORD" -C -b -I \
+  -v "BI_DB_USER=$BI_DB_USER" "BI_DB_PASSWORD=$BI_DB_PASSWORD_SQL" \
+  -i /scripts/bi-login.sql
+unset BI_DB_PASSWORD_SQL
+
+echo "[db-init] bases y acceso de lectura BI inicializados"
