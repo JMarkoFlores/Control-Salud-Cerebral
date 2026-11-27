@@ -106,9 +106,9 @@ export class AdminRepository {
   async getUbicaciones(): Promise<any[]> {
     const pool = await getPool();
     const res = await pool.request().query(`
-      SELECT ubicacion_id, pais, departamento, provincia, distrito
+      SELECT ubicacion_id, pais, departamento, provincia, ciudad, distrito
       FROM ubicacion
-      ORDER BY distrito ASC
+      ORDER BY ciudad ASC, distrito ASC
     `);
     return res.recordset;
   }
@@ -633,6 +633,7 @@ export class AdminRepository {
       SELECT 
         p.codigo_interno,
         DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) AS edad,
+        u.ciudad,
         u.distrito,
         CONVERT(VARCHAR(10), m.inicio_semana, 120) AS inicio_semana,
         m.valor_meta AS meta_minutos,
@@ -662,7 +663,7 @@ export class AdminRepository {
     }
 
     query += `
-      GROUP BY p.persona_id, p.codigo_interno, p.fecha_nacimiento, u.distrito, m.inicio_semana, m.valor_meta
+      GROUP BY p.persona_id, p.codigo_interno, p.fecha_nacimiento, u.ciudad, u.distrito, m.inicio_semana, m.valor_meta
       ORDER BY p.codigo_interno ASC, m.inicio_semana DESC
     `;
 
@@ -678,6 +679,7 @@ export class AdminRepository {
       SELECT 
         p.codigo_interno,
         DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) AS edad,
+        u.ciudad,
         u.distrito,
         CONVERT(VARCHAR(10), m.inicio_semana, 120) AS inicio_semana,
         m.valor_meta AS meta_dias,
@@ -706,7 +708,7 @@ export class AdminRepository {
     }
 
     query += `
-      GROUP BY p.persona_id, p.codigo_interno, p.fecha_nacimiento, u.distrito, m.inicio_semana, m.valor_meta
+      GROUP BY p.persona_id, p.codigo_interno, p.fecha_nacimiento, u.ciudad, u.distrito, m.inicio_semana, m.valor_meta
       ORDER BY p.codigo_interno ASC, m.inicio_semana DESC
     `;
 
@@ -722,6 +724,7 @@ export class AdminRepository {
       SELECT 
         p.codigo_interno,
         DATEDIFF(YEAR, p.fecha_nacimiento, GETDATE()) AS edad,
+        u.ciudad,
         u.distrito,
         CONVERT(VARCHAR(10), c.mes_periodo, 120) AS mes_periodo,
         COUNT(c.control_id) AS total_programados,
@@ -740,7 +743,7 @@ export class AdminRepository {
     }
 
     query += `
-      GROUP BY p.persona_id, p.codigo_interno, p.fecha_nacimiento, u.distrito, c.mes_periodo
+      GROUP BY p.persona_id, p.codigo_interno, p.fecha_nacimiento, u.ciudad, u.distrito, c.mes_periodo
       ORDER BY p.codigo_interno ASC, c.mes_periodo DESC
     `;
 

@@ -68,19 +68,19 @@ export const ReportesAdmin: React.FC = () => {  const [tipoReporte, setTipoRepor
     let rows: string[] = [];
 
     if (tipoReporte === 'actividad') {
-      headers = 'Codigo_Interno,Edad,Distrito,Semana_Inicio,Meta_Minutos,Minutos_Logrados,Porcentaje_CAF,Estado,Es_Evaluable';
+      headers = 'Codigo_Interno,Edad,Ciudad,Distrito,Semana_Inicio,Meta_Minutos,Minutos_Logrados,Porcentaje_CAF,Estado,Es_Evaluable';
       rows = reporteData.filas.map((f: any) =>
-        `"${f.codigo_interno}",${f.edad},"${f.distrito}","${f.inicio_semana}",${f.meta_minutos},${f.minutos_logrados},"${f.porcentajeTexto}","${f.estado}",${f.esEvaluable ? 'SI' : 'NO'}`
+        `"${f.codigo_interno}",${f.edad},"${f.ciudad}","${f.distrito}","${f.inicio_semana}",${f.meta_minutos},${f.minutos_logrados},"${f.porcentajeTexto}","${f.estado}",${f.esEvaluable ? 'SI' : 'NO'}`
       );
     } else if (tipoReporte === 'social') {
-      headers = 'Codigo_Interno,Edad,Distrito,Semana_Inicio,Meta_Dias,Dias_Con_Contacto,Porcentaje_CCS,Estado,Es_Evaluable';
+      headers = 'Codigo_Interno,Edad,Ciudad,Distrito,Semana_Inicio,Meta_Dias,Dias_Con_Contacto,Porcentaje_CCS,Estado,Es_Evaluable';
       rows = reporteData.filas.map((f: any) =>
-        `"${f.codigo_interno}",${f.edad},"${f.distrito}","${f.inicio_semana}",${f.meta_dias},${f.dias_con_contacto},"${f.porcentajeTexto}","${f.estado}",${f.esEvaluable ? 'SI' : 'NO'}`
+        `"${f.codigo_interno}",${f.edad},"${f.ciudad}","${f.distrito}","${f.inicio_semana}",${f.meta_dias},${f.dias_con_contacto},"${f.porcentajeTexto}","${f.estado}",${f.esEvaluable ? 'SI' : 'NO'}`
       );
     } else {
-      headers = 'Codigo_Interno,Edad,Distrito,Mes_Periodo,Total_Programados,Controles_En_Meta,Porcentaje_FCM,Estado,Es_Evaluable';
+      headers = 'Codigo_Interno,Edad,Ciudad,Distrito,Mes_Periodo,Total_Programados,Controles_En_Meta,Porcentaje_FCM,Estado,Es_Evaluable';
       rows = reporteData.filas.map((f: any) =>
-        `"${f.codigo_interno}",${f.edad},"${f.distrito}","${f.mes_periodo}",${f.total_programados},${f.controles_en_meta},"${f.porcentajeTexto}","${f.estado}",${f.esEvaluable ? 'SI' : 'NO'}`
+        `"${f.codigo_interno}",${f.edad},"${f.ciudad}","${f.distrito}","${f.mes_periodo}",${f.total_programados},${f.controles_en_meta},"${f.porcentajeTexto}","${f.estado}",${f.esEvaluable ? 'SI' : 'NO'}`
       );
     }
 
@@ -218,6 +218,7 @@ export const ReportesAdmin: React.FC = () => {  const [tipoReporte, setTipoRepor
               <tr>
                 <th className="py-3 px-4">Código Titular</th>
                 <th className="py-3 px-4">Edad</th>
+                <th className="py-3 px-4">Ciudad</th>
                 <th className="py-3 px-4">Distrito</th>
                 <th className="py-3 px-4">{tipoReporte === 'cardio' ? 'Mes Periodo' : 'Semana Inicio'}</th>
                 {tipoReporte === 'actividad' && (
@@ -248,7 +249,7 @@ export const ReportesAdmin: React.FC = () => {  const [tipoReporte, setTipoRepor
             <tbody className="divide-y divide-slate-100">
               {reporteData?.filas?.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="py-8 text-center text-slate-400">
+                  <td colSpan={9} className="py-8 text-center text-slate-400">
                     No hay registros para este periodo.
                   </td>
                 </tr>
@@ -257,6 +258,7 @@ export const ReportesAdmin: React.FC = () => {  const [tipoReporte, setTipoRepor
                   <tr key={idx} className={!f.esEvaluable ? 'bg-slate-50/50 opacity-75' : 'hover:bg-slate-50/50'}>
                     <td className="py-3 px-4 font-mono font-bold text-health-petroleo">{f.codigo_interno}</td>
                     <td className="py-3 px-4 text-slate-600">{f.edad} a</td>
+                    <td className="py-3 px-4 text-slate-600">{f.ciudad}</td>
                     <td className="py-3 px-4 text-slate-600">{f.distrito}</td>
                     <td className="py-3 px-4 font-mono text-slate-500">
                       {f.inicio_semana || f.mes_periodo}

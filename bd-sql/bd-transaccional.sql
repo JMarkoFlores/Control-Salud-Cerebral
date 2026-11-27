@@ -21,8 +21,9 @@ CREATE TABLE ubicacion (
     pais         VARCHAR(60) NOT NULL DEFAULT 'Perú',
     departamento VARCHAR(80) NOT NULL,
     provincia    VARCHAR(80) NOT NULL,
+    ciudad       VARCHAR(80) NOT NULL,
     distrito     VARCHAR(80) NOT NULL,
-    CONSTRAINT uq_ubicacion UNIQUE (pais, departamento, provincia, distrito)
+    CONSTRAINT uq_ubicacion UNIQUE (pais, departamento, provincia, ciudad, distrito)
 );
 GO
 

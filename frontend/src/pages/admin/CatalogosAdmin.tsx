@@ -101,7 +101,7 @@ export const CatalogosAdmin: React.FC = () => {
                 <div>
                   <span className="font-bold text-slate-800 block">{u.distrito}</span>
                   <span className="text-slate-400 text-[11px]">
-                    {u.provincia}, {u.departamento} ({u.pais})
+                    {u.ciudad} · {u.provincia}, {u.departamento} ({u.pais})
                   </span>
                 </div>
                 <span className="font-mono text-[10px] text-slate-400 bg-slate-100 px-2 py-1 rounded">

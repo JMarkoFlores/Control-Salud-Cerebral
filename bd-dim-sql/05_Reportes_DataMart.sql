@@ -14,6 +14,7 @@ CREATE OR ALTER FUNCTION [bi].[fn_IndicadoresReporte] (
     @pais NVARCHAR(60),
     @departamento NVARCHAR(80),
     @provincia NVARCHAR(80),
+    @ciudad NVARCHAR(80),
     @distrito NVARCHAR(80),
     @sexo CHAR(1),
     @grupo_edad NVARCHAR(20),
@@ -33,6 +34,7 @@ AS RETURN (
       AND (@pais IS NULL OR i.pais = @pais)
       AND (@departamento IS NULL OR i.departamento = @departamento)
       AND (@provincia IS NULL OR i.provincia = @provincia)
+      AND (@ciudad IS NULL OR i.ciudad = @ciudad)
       AND (@distrito IS NULL OR i.distrito = @distrito)
       AND (@sexo IS NULL OR i.sexo = @sexo)
       AND (@grupo_edad IS NULL OR i.grupo_edad = @grupo_edad)
@@ -50,6 +52,7 @@ CREATE OR ALTER PROCEDURE [bi].[usp_ReporteSeguimientoPreventivo]
     @pais NVARCHAR(60) = N'Perú',
     @departamento NVARCHAR(80) = NULL,
     @provincia NVARCHAR(80) = NULL,
+    @ciudad NVARCHAR(80) = NULL,
     @distrito NVARCHAR(80) = NULL,
     @sexo CHAR(1) = NULL,
     @grupo_edad NVARCHAR(20) = NULL,
@@ -99,7 +102,7 @@ BEGIN
         THROW 50104, N'El periodo solicitado es posterior al último ETL.', 1;
 
     SELECT i.* INTO #seleccion
-    FROM [bi].[fn_IndicadoresReporte](NULL, NULL, @key_persona, @pais, @departamento, @provincia, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i
+    FROM [bi].[fn_IndicadoresReporte](NULL, NULL, @key_persona, @pais, @departamento, @provincia, @ciudad, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i
     WHERE (i.codigo_indicador IN ('CAF','CCS') AND i.periodo = @inicio_semana)
        OR (i.codigo_indicador = 'FCM' AND i.periodo = @mes_periodo);
 
@@ -153,7 +156,7 @@ BEGIN
     -- MAX(CASE ...) selecciona el único valor de cada indicador para ese participante.
     -- Si un participante no tiene una fila para ese periodo, permanece NULL (no cero).
     SELECT N'R01-B | Seguimiento por participante' AS reporte, s.key_persona,
-           MAX(s.sexo) AS sexo, MAX(s.departamento) AS departamento, MAX(s.provincia) AS provincia, MAX(s.distrito) AS distrito,
+           MAX(s.sexo) AS sexo, MAX(s.departamento) AS departamento, MAX(s.provincia) AS provincia, MAX(s.ciudad) AS ciudad, MAX(s.distrito) AS distrito,
            MAX(CASE WHEN s.codigo_indicador IN ('CAF','CCS') THEN s.grupo_edad END) AS grupo_edad_semanal,
            MAX(CASE WHEN s.codigo_indicador = 'FCM' THEN s.grupo_edad END) AS grupo_edad_mensual,
            @inicio_semana AS inicio_semana, @mes_periodo AS mes_periodo,
@@ -204,6 +207,7 @@ CREATE OR ALTER PROCEDURE [bi].[usp_ReporteActividadFisicaSemanal]
     @pais NVARCHAR(60) = N'Perú',
     @departamento NVARCHAR(80) = NULL,
     @provincia NVARCHAR(80) = NULL,
+    @ciudad NVARCHAR(80) = NULL,
     @distrito NVARCHAR(80) = NULL,
     @sexo CHAR(1) = NULL,
     @grupo_edad NVARCHAR(20) = NULL,
@@ -212,11 +216,11 @@ AS
 BEGIN
     SET NOCOUNT ON;
     IF @desde > @hasta THROW 50105,N'El intervalo de fechas no es válido.', 1;
-    SELECT N'R02 | Actividad física semanal' AS reporte, i.key_persona, i.sexo, i.grupo_edad, i.distrito,
+    SELECT N'R02 | Actividad física semanal' AS reporte, i.key_persona, i.sexo, i.grupo_edad, i.ciudad, i.distrito,
            i.periodo AS inicio_semana, i.fin_periodo AS fin_semana, i.numerador AS M1_minutos_realizados,
            i.denominador AS M2_meta_minutos_semanal, i.porcentaje AS CAF,
            i.estado_indicador, i.estado_datos, i.es_evaluable, i.periodo_cerrado, i.fecha_corte
-    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i
+    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @ciudad, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i
     WHERE i.codigo_indicador = 'CAF' ORDER BY i.periodo DESC, i.key_persona;
 END;
 GO
@@ -229,6 +233,7 @@ CREATE OR ALTER PROCEDURE [bi].[usp_ReporteContactoSocialSemanal]
     @pais NVARCHAR(60) = N'Perú',
     @departamento NVARCHAR(80) = NULL,
     @provincia NVARCHAR(80) = NULL,
+    @ciudad NVARCHAR(80) = NULL,
     @distrito NVARCHAR(80) = NULL,
     @sexo CHAR(1) = NULL,
     @grupo_edad NVARCHAR(20) = NULL,
@@ -237,11 +242,11 @@ AS
 BEGIN
     SET NOCOUNT ON;
     IF @desde > @hasta THROW 50105,N'El intervalo de fechas no es válido.', 1;
-    SELECT N'R03 | Contacto social semanal' AS reporte, i.key_persona, i.sexo, i.grupo_edad, i.distrito,
+    SELECT N'R03 | Contacto social semanal' AS reporte, i.key_persona, i.sexo, i.grupo_edad, i.ciudad, i.distrito,
            i.periodo AS inicio_semana, i.fin_periodo AS fin_semana, i.numerador AS M3_dias_con_contacto,
            i.denominador AS M4_meta_dias_semanal, i.porcentaje AS CCS,
            i.estado_indicador, i.estado_datos, i.es_evaluable, i.periodo_cerrado, i.fecha_corte
-    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i
+    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @ciudad, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i
     WHERE i.codigo_indicador = 'CCS' ORDER BY i.periodo DESC, i.key_persona;
 END;
 GO
@@ -255,6 +260,7 @@ CREATE OR ALTER PROCEDURE [bi].[usp_ReporteControlesCardiometabolicosMensuales]
     @pais NVARCHAR(60) = N'Perú',
     @departamento NVARCHAR(80) = NULL,
     @provincia NVARCHAR(80) = NULL,
+    @ciudad NVARCHAR(80) = NULL,
     @distrito NVARCHAR(80) = NULL,
     @sexo CHAR(1) = NULL,
     @grupo_edad NVARCHAR(20) = NULL,
@@ -264,9 +270,9 @@ BEGIN
     SET NOCOUNT ON;
     IF @desde > @hasta THROW 50105,N'El intervalo de fechas no es válido.', 1;
     SELECT i.key_persona, i.periodo INTO #periodos
-    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i
+    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @ciudad, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i
     WHERE i.codigo_indicador = 'FCM';
-    SELECT N'R04-A | Control cardiometabólico mensual' AS reporte, f.key_persona, f.sexo, f.grupo_edad, f.distrito,
+    SELECT N'R04-A | Control cardiometabólico mensual' AS reporte, f.key_persona, f.sexo, f.grupo_edad, f.ciudad, f.distrito,
            f.periodo AS mes_periodo, f.numerador AS M5_factores_dentro_meta, f.denominador AS M6_factores_previstos,
            f.factores_evaluados, f.factores_pendientes, f.factores_no_programados, f.factores_sin_seguimiento,
            f.porcentaje AS FCM, f.estado_indicador, f.estado_datos, f.es_evaluable, f.periodo_cerrado, f.fecha_corte
@@ -290,6 +296,7 @@ CREATE OR ALTER PROCEDURE [bi].[usp_ReportePendientesSeguimiento]
     @pais NVARCHAR(60) = N'Perú',
     @departamento NVARCHAR(80) = NULL,
     @provincia NVARCHAR(80) = NULL,
+    @ciudad NVARCHAR(80) = NULL,
     @distrito NVARCHAR(80) = NULL,
     @sexo CHAR(1) = NULL,
     @grupo_edad NVARCHAR(20) = NULL,
@@ -299,13 +306,13 @@ BEGIN
     SET NOCOUNT ON;
     IF @desde > @hasta THROW 50105,N'El intervalo de fechas no es válido.', 1;
     SELECT i.* INTO #indicadores
-    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i;
-    SELECT N'R05-A | Hábitos pendientes o sin meta' AS reporte, key_persona, distrito, grupo_edad, codigo_indicador,
+    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @ciudad, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i;
+    SELECT N'R05-A | Hábitos pendientes o sin meta' AS reporte, key_persona, ciudad, distrito, grupo_edad, codigo_indicador,
            periodo, fin_periodo, numerador, denominador, estado_datos, estado_indicador, periodo_cerrado, fecha_corte
     FROM #indicadores WHERE codigo_indicador IN ('CAF','CCS') AND estado_datos IN ('PENDIENTE','SIN_META')
     ORDER BY periodo DESC, key_persona, codigo_indicador;
 
-    SELECT N'R05-B | Controles pendientes o sin programación' AS reporte, d.key_persona, d.distrito, d.grupo_edad, d.periodo,
+    SELECT N'R05-B | Controles pendientes o sin programación' AS reporte, d.key_persona, d.ciudad, d.distrito, d.grupo_edad, d.periodo,
            d.tipo_control, d.fin_periodo AS fin_mes, d.estado_datos, d.origen_resultado, d.estado_validacion,
            d.factores_dentro_meta AS M5, d.factores_previstos AS M6, d.fecha_corte,
            CASE WHEN d.estado_datos IN ('PENDIENTE','META_INCOMPLETA') AND d.fin_periodo < d.fecha_corte THEN 'PERIODO_CERRADO'
@@ -327,6 +334,7 @@ CREATE OR ALTER PROCEDURE [bi].[usp_ReporteEvolucionPreventiva]
     @pais NVARCHAR(60) = N'Perú',
     @departamento NVARCHAR(80) = NULL,
     @provincia NVARCHAR(80) = NULL,
+    @ciudad NVARCHAR(80) = NULL,
     @distrito NVARCHAR(80) = NULL,
     @sexo CHAR(1) = NULL,
     @grupo_edad NVARCHAR(20) = NULL,
@@ -336,7 +344,7 @@ BEGIN
     SET NOCOUNT ON;
     IF @desde > @hasta THROW 50105,N'El intervalo de fechas no es válido.', 1;
     SELECT i.* INTO #historia
-    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i;
+    FROM [bi].[fn_IndicadoresReporte](@desde, @hasta, @key_persona, @pais, @departamento, @provincia, @ciudad, @distrito, @sexo, @grupo_edad, @solo_rango_edad) i;
 
     ;WITH serie AS (
        SELECT codigo_indicador, periodicidad, periodo, fin_periodo, unidad_medida, periodo_cerrado,
@@ -353,17 +361,17 @@ BEGIN
     FROM serie s ORDER BY s.codigo_indicador, s.periodo;
 
     ;WITH segmento AS (
-       SELECT codigo_indicador, periodicidad, periodo, departamento, provincia, distrito, grupo_edad, sexo, unidad_medida,
+       SELECT codigo_indicador, periodicidad, periodo, departamento, provincia, ciudad, distrito, grupo_edad, sexo, unidad_medida,
               COUNT(*) AS participantes,
               SUM(CONVERT(BIGINT, CASE WHEN es_evaluable = 1 THEN 1 ELSE 0 END)) AS participantes_evaluables,
               SUM(CONVERT(BIGINT, CASE WHEN estado_datos = 'PENDIENTE' THEN 1 ELSE 0 END)) AS participantes_pendientes,
               SUM(CASE WHEN es_evaluable = 1 THEN numerador END) AS numerador,
               SUM(CASE WHEN es_evaluable = 1 THEN denominador END) AS denominador
-       FROM #historia GROUP BY codigo_indicador, periodicidad, periodo, departamento, provincia, distrito, grupo_edad, sexo, unidad_medida
+       FROM #historia GROUP BY codigo_indicador, periodicidad, periodo, departamento, provincia, ciudad, distrito, grupo_edad, sexo, unidad_medida
     )
     SELECT N'R06-B | Comparación por segmento' AS reporte, s.*,
            CONVERT(DECIMAL(19, 2), 100.0*CONVERT(DECIMAL(20, 2), s.numerador)/NULLIF(s.denominador, 0)) AS porcentaje
-    FROM segmento s ORDER BY s.codigo_indicador, s.periodo, s.distrito, s.grupo_edad, s.sexo;
+    FROM segmento s ORDER BY s.codigo_indicador, s.periodo, s.ciudad, s.distrito, s.grupo_edad, s.sexo;
 END;
 GO
 
@@ -372,11 +380,11 @@ GO
 -- Cada procedimiento consulta el Data Mart, no el OLTP. No requiere ejecutar ETL otra vez
 -- si la fecha de corte está vigente. Los filtros son opcionales.
 -- ============================================================================
--- EXEC [bi].[usp_ReporteSeguimientoPreventivo] @departamento=N'La Libertad',@provincia=N'Trujillo';
--- EXEC [bi].[usp_ReporteActividadFisicaSemanal] @provincia=N'Trujillo';
--- EXEC [bi].[usp_ReporteContactoSocialSemanal] @provincia=N'Trujillo';
--- EXEC [bi].[usp_ReporteControlesCardiometabolicosMensuales] @provincia=N'Trujillo';
--- EXEC [bi].[usp_ReportePendientesSeguimiento] @provincia=N'Trujillo';
--- EXEC [bi].[usp_ReporteEvolucionPreventiva] @provincia=N'Trujillo';
+-- EXEC [bi].[usp_ReporteSeguimientoPreventivo] @departamento=N'La Libertad',@provincia=N'Trujillo',@ciudad=N'Trujillo';
+-- EXEC [bi].[usp_ReporteActividadFisicaSemanal] @ciudad=N'Trujillo';
+-- EXEC [bi].[usp_ReporteContactoSocialSemanal] @ciudad=N'Trujillo';
+-- EXEC [bi].[usp_ReporteControlesCardiometabolicosMensuales] @ciudad=N'Trujillo';
+-- EXEC [bi].[usp_ReportePendientesSeguimiento] @ciudad=N'Trujillo';
+-- EXEC [bi].[usp_ReporteEvolucionPreventiva] @ciudad=N'Trujillo';
 -- Ejemplo por fechas y persona (reemplazar la KEY con una real/autorizada):
 -- EXEC [bi].[usp_ReporteSeguimientoPreventivo] @inicio_semana='2026-11-23',@mes_periodo='2026-11-01',@key_persona=2;

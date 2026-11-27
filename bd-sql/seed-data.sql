@@ -10,17 +10,17 @@ GO
 SET NOCOUNT ON;
 
 -- -----------------------------------------------------------------------------
--- 1. UBICACION (Distritos del Piloto en Trujillo, Perú)
+-- 1. UBICACION (Distritos del Piloto en la ciudad de Trujillo, Perú)
 -- -----------------------------------------------------------------------------
 IF NOT EXISTS (SELECT 1 FROM ubicacion WHERE distrito = 'Trujillo')
 BEGIN
-    INSERT INTO ubicacion (pais, departamento, provincia, distrito) VALUES
-    ('Perú', 'La Libertad', 'Trujillo', 'Trujillo'),
-    ('Perú', 'La Libertad', 'Trujillo', 'Víctor Larco Herrera'),
-    ('Perú', 'La Libertad', 'Trujillo', 'Huanchaco'),
-    ('Perú', 'La Libertad', 'Trujillo', 'La Esperanza'),
-    ('Perú', 'La Libertad', 'Trujillo', 'El Porvenir'),
-    ('Perú', 'La Libertad', 'Trujillo', 'Moche');
+    INSERT INTO ubicacion (pais, departamento, provincia, ciudad, distrito) VALUES
+    ('Perú', 'La Libertad', 'Trujillo', 'Trujillo', 'Trujillo'),
+    ('Perú', 'La Libertad', 'Trujillo', 'Trujillo', 'Víctor Larco Herrera'),
+    ('Perú', 'La Libertad', 'Trujillo', 'Trujillo', 'Huanchaco'),
+    ('Perú', 'La Libertad', 'Trujillo', 'Trujillo', 'La Esperanza'),
+    ('Perú', 'La Libertad', 'Trujillo', 'Trujillo', 'El Porvenir'),
+    ('Perú', 'La Libertad', 'Trujillo', 'Trujillo', 'Moche');
 END
 GO
 

@@ -17,12 +17,11 @@ SELECT p.persona_id AS id_persona,
 FROM [dbo].[persona] AS p;
 GO
 
--- D3. Ubicación: ciudad queda NULL porque no existe en el OLTP.
+-- D3. Ubicación: ciudad proviene del OLTP y se conserva como nivel propio.
 CREATE OR ALTER VIEW [dbo].[v_DatosDimUbicacion]
 AS
 SELECT u.ubicacion_id AS id_ubicacion,
-       u.pais, u.departamento, u.provincia,
-       CONVERT(NVARCHAR(80), NULL) AS ciudad,
+       u.pais, u.departamento, u.provincia, u.ciudad,
        u.distrito
 FROM [dbo].[ubicacion] AS u;
 GO
@@ -525,6 +524,7 @@ BEGIN TRY
             dim.pais         = oltp.pais,
             dim.departamento = oltp.departamento,
             dim.provincia    = oltp.provincia,
+            dim.ciudad       = oltp.ciudad,
             dim.distrito     = oltp.distrito
     WHEN NOT MATCHED BY TARGET THEN
         INSERT (pais, departamento, provincia, ciudad, distrito, id_ubicacion)
